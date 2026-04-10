@@ -51,6 +51,7 @@ export const analyzeDistressDefinition = {
   _meta: {
     surface: 'both',
     queryEligible: true,
+    latencyClass: 'fast',
     pricing: { executeUsd: '0.10' },
   },
 };

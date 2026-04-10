@@ -37,6 +37,7 @@ export const compareCountiesDefinition = {
   _meta: {
     surface: 'both',
     queryEligible: true,
+    latencyClass: 'slow',
     pricing: { executeUsd: '0.10' },
   },
 };

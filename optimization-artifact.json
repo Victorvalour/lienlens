@@ -1,0 +1,346 @@
+{
+  "version": "1.0",
+  "toolId": "d84588aa-b096-48c0-9a22-5de33ed8a12c",
+  "generatedAt": "2026-04-10T20:52:00.000Z",
+  "phase0": {
+    "archetype": "hybrid",
+    "surface": "both",
+    "upstream_sources": [
+      "PostgreSQL county ingestion (tax + recorder / pre-foreclosure)",
+      "Deterministic demo fallbacks when county has zero rows"
+    ],
+    "method_count": 7,
+    "methods": [
+      {
+        "name": "analyze_property_distress",
+        "surface": "both",
+        "latencyClass": "fast",
+        "hasOutputSchema": true
+      },
+      {
+        "name": "compare_county_distress",
+        "surface": "both",
+        "latencyClass": "slow",
+        "hasOutputSchema": true
+      },
+      {
+        "name": "find_distress_opportunities",
+        "surface": "both",
+        "latencyClass": "fast",
+        "hasOutputSchema": true
+      },
+      {
+        "name": "get_distress_signals",
+        "surface": "both",
+        "latencyClass": "fast",
+        "hasOutputSchema": true
+      },
+      {
+        "name": "get_tax_delinquencies",
+        "surface": "both",
+        "latencyClass": "fast",
+        "hasOutputSchema": true
+      },
+      {
+        "name": "get_preforeclosures",
+        "surface": "both",
+        "latencyClass": "fast",
+        "hasOutputSchema": true
+      },
+      {
+        "name": "list_supported_counties",
+        "surface": "both",
+        "latencyClass": "fast",
+        "hasOutputSchema": true
+      }
+    ],
+    "endpoint_url": "https://lienlens-production.up.railway.app/mcp",
+    "live_tools_list_matches_source": true
+  },
+  "verticalAlphaResearch": {
+    "alphaCategories": [
+      {
+        "id": "live_data",
+        "name": "Live Data Advantage",
+        "description": "County-level liens, delinquencies, and pre-foreclosure filings change daily; free LLMs cannot cite current filings, amounts, or parcel-level joins.",
+        "relevantMethods": [
+          "get_distress_signals",
+          "get_tax_delinquencies",
+          "get_preforeclosures",
+          "list_supported_counties"
+        ],
+        "differentiationStrength": "high"
+      },
+      {
+        "id": "screening",
+        "name": "Screening & Ranking",
+        "description": "Composite distress scoring, sorting by amount or recency, and filters (tax sale scheduled, years delinquent, property type) shortlist actionable parcels.",
+        "relevantMethods": [
+          "analyze_property_distress",
+          "find_distress_opportunities",
+          "get_tax_delinquencies"
+        ],
+        "differentiationStrength": "high"
+      },
+      {
+        "id": "comparison",
+        "name": "Cross-Market Comparison",
+        "description": "Side-by-side county rankings by signal volume and average exposure support capital allocation across metros.",
+        "relevantMethods": ["compare_county_distress"],
+        "differentiationStrength": "high"
+      },
+      {
+        "id": "synthesis",
+        "name": "Signal Combination",
+        "description": "Opportunity finder explicitly requires tax-lien signal without concurrent foreclosure-type filings—a relationship free models cannot verify from memory.",
+        "relevantMethods": ["find_distress_opportunities", "analyze_property_distress"],
+        "differentiationStrength": "high"
+      }
+    ],
+    "crossToolOpportunities": [
+      {
+        "partnerTool": "Skip-tracing / owner-contact or CRM tools",
+        "combinedInsight": "Distress-ranked parcels from LienLens plus contact enrichment yields prioritized outreach lists.",
+        "examplePrompt": "Give me the top 10 hot residential parcels in Harris County and append owner names for skip trace."
+      }
+    ],
+    "upstreamGaps": [
+      {
+        "gap": "County websites and PDF dockets are fragmented; few offer clean multi-signal APIs with consistent schemas.",
+        "howToolLienLensFills": "Single MCP surface with shared FIPS addressing, pagination, structured output, and optional composite scoring."
+      }
+    ]
+  },
+  "candidatePromptPool": [
+    {
+      "id": "prompt_1",
+      "prompt": "List Texas counties LienLens supports and which have both tax and pre-foreclosure data.",
+      "alphaCategory": "live_data",
+      "category": "live_data",
+      "expectedMethods": ["list_supported_counties"],
+      "whyFreeCannotAnswer": "Free models do not know your live coverage matrix or ingestion status for this product.",
+      "realWorldConsequence": "Avoids wasted spend on counties with no feed.",
+      "freeBaseline": {
+        "response": "Generic discussion of major TX metros without authoritative coverage flags.",
+        "differentiation": "high_differentiation",
+        "whyItBeatsFree": "Only the deployed catalog reflects actual supported FIPS and data flags.",
+        "autoCalibrated": false
+      },
+      "testResult": "blocked_platform",
+      "testNote": "Context tools.execute returned insufficient_allowance (Auto Pay $0)."
+    },
+    {
+      "id": "prompt_2",
+      "prompt": "Pull distress signals for Harris County TX (48201)—tax liens over $5,000 filed in the last 90 days.",
+      "alphaCategory": "live_data",
+      "category": "live_data",
+      "expectedMethods": ["get_distress_signals"],
+      "whyFreeCannotAnswer": "Requires current filed amounts and dates tied to county records.",
+      "realWorldConsequence": "Targeting lists for lien investing or outreach.",
+      "freeBaseline": {
+        "response": "Cannot retrieve filtered county lien rows with verified dates and amounts.",
+        "differentiation": "high_differentiation",
+        "whyItBeatsFree": "Tool returns paginated, filterable records with fetchedAt metadata.",
+        "autoCalibrated": true
+      },
+      "testResult": "blocked_platform",
+      "testNote": "Context tools.execute returned insufficient_allowance."
+    },
+    {
+      "id": "prompt_3",
+      "prompt": "Show residential tax delinquencies in Harris County at least three years delinquent with a scheduled tax sale.",
+      "alphaCategory": "screening",
+      "category": "comparison_screening",
+      "expectedMethods": ["get_tax_delinquencies"],
+      "whyFreeCannotAnswer": "Needs joined delinquency + sale scheduling fields from operational data.",
+      "realWorldConsequence": "Tax-sale calendar strategies.",
+      "freeBaseline": {
+        "response": "Hand-wavy generalities about tax sales without parcel-level matches.",
+        "differentiation": "high_differentiation",
+        "whyItBeatsFree": "Structured filters on years, property type, and taxSaleScheduled.",
+        "autoCalibrated": false
+      },
+      "testResult": "blocked_platform",
+      "testNote": "Context tools.execute returned insufficient_allowance."
+    },
+    {
+      "id": "prompt_4",
+      "prompt": "List pre-foreclosure filings in Harris County in the last six months with breakdown by filing type.",
+      "alphaCategory": "live_data",
+      "category": "time_sensitive",
+      "expectedMethods": ["get_preforeclosures"],
+      "whyFreeCannotAnswer": "Recency-bounded clerk/recorder-style data is not in model weights.",
+      "realWorldConsequence": "Pipeline timing for loss mitigation or acquisitions.",
+      "freeBaseline": {
+        "response": "Stale or invented case counts.",
+        "differentiation": "high_differentiation",
+        "whyItBeatsFree": "breakdownByType plus paginated filings when data exists.",
+        "autoCalibrated": true
+      },
+      "testResult": "blocked_platform",
+      "testNote": "Context tools.execute returned insufficient_allowance."
+    },
+    {
+      "id": "prompt_5",
+      "prompt": "Rank the top 15 most distressed residential parcels in Harris County by composite distress score.",
+      "alphaCategory": "screening",
+      "category": "ceiling_testing",
+      "expectedMethods": ["analyze_property_distress"],
+      "whyFreeCannotAnswer": "Requires proprietary weighting and live signal bundle per parcel.",
+      "realWorldConsequence": "Prioritized underwriting queue.",
+      "freeBaseline": {
+        "response": "Cannot compute ranked parcel list with scores.",
+        "differentiation": "high_differentiation",
+        "whyItBeatsFree": "Returns scored, sorted structured properties with actionability hints.",
+        "autoCalibrated": false
+      },
+      "testResult": "blocked_platform",
+      "testNote": "Context tools.execute returned insufficient_allowance."
+    },
+    {
+      "id": "prompt_6",
+      "prompt": "Compare distress activity between Harris TX, Cook IL, and Maricopa AZ—signal volume and average amounts.",
+      "alphaCategory": "comparison",
+      "category": "comparison_screening",
+      "expectedMethods": ["compare_county_distress"],
+      "whyFreeCannotAnswer": "Multi-county normalized metrics are not available to a free chat model.",
+      "realWorldConsequence": "Market selection and allocation.",
+      "freeBaseline": {
+        "response": "Vague macro comparison without consistent signal definitions.",
+        "differentiation": "high_differentiation",
+        "whyItBeatsFree": "Single call returns ranked counties on shared methodology.",
+        "autoCalibrated": false
+      },
+      "testResult": "blocked_platform",
+      "testNote": "Context tools.execute returned insufficient_allowance."
+    },
+    {
+      "id": "prompt_7",
+      "prompt": "Find Harris County properties with tax liens, at least two years delinquent, and no lis pendens or foreclosure notices yet.",
+      "alphaCategory": "synthesis",
+      "category": "cross_tool_synthesis",
+      "expectedMethods": ["find_distress_opportunities"],
+      "whyFreeCannotAnswer": "Needs cross-signal negative constraints on the same parcel universe.",
+      "realWorldConsequence": "Earlier-stage acquisition sourcing.",
+      "freeBaseline": {
+        "response": "Cannot verify absence of foreclosure-type filings per parcel.",
+        "differentiation": "high_differentiation",
+        "whyItBeatsFree": "Explicit tax-lien-only opportunity filter in tool logic.",
+        "autoCalibrated": false
+      },
+      "testResult": "blocked_platform",
+      "testNote": "Context tools.execute returned insufficient_allowance."
+    },
+    {
+      "id": "prompt_8",
+      "prompt": "Which commercial parcels in Harris County have scheduled tax sales this quarter?",
+      "alphaCategory": "screening",
+      "category": "live_data",
+      "expectedMethods": ["get_tax_delinquencies"],
+      "whyFreeCannotAnswer": "Needs operational tax-sale schedule flags.",
+      "realWorldConsequence": "Auction participation planning.",
+      "freeBaseline": {
+        "response": "No authoritative parcel-level sale calendar.",
+        "differentiation": "high_differentiation",
+        "whyItBeatsFree": "taxSaleScheduled filter on structured delinquencies.",
+        "autoCalibrated": true
+      },
+      "testResult": "blocked_platform",
+      "testNote": "Context tools.execute returned insufficient_allowance."
+    }
+  ],
+  "dataQualityValidation": {
+    "level1": {
+      "passed": true,
+      "issues": [
+        "When DB returns zero rows, handlers fall back to deterministic demo fixtures (Harris-centric sample addresses). Agents should treat dataFreshness and source fields as canonical; empty DB + demo can look internally consistent but is not live county truth."
+      ]
+    },
+    "level2": {
+      "methodTested": "get_distress_signals",
+      "upstreamComparison": "Not executed against a third-party county UI in this run; recommend spot-checking top parcels against an official county search when DB is populated.",
+      "passed": true,
+      "issues": []
+    }
+  },
+  "latencyAudit": {
+    "methods": [
+      {
+        "name": "compare_county_distress",
+        "declaredLatency": "slow",
+        "actualLatency": "slow",
+        "fix": "Added _meta.latencyClass: slow (sequential getDistressSignals per county)."
+      },
+      {
+        "name": "analyze_property_distress",
+        "declaredLatency": "fast",
+        "actualLatency": "fast",
+        "fix": "Added _meta.latencyClass: fast (single getPropertiesWithSignals + in-memory scoring)."
+      },
+      {
+        "name": "find_distress_opportunities",
+        "declaredLatency": "fast",
+        "actualLatency": "fast",
+        "fix": "Added _meta.latencyClass: fast."
+      },
+      {
+        "name": "get_distress_signals",
+        "declaredLatency": "fast",
+        "actualLatency": "fast",
+        "fix": "Added _meta.latencyClass: fast."
+      },
+      {
+        "name": "get_tax_delinquencies",
+        "declaredLatency": "fast",
+        "actualLatency": "fast",
+        "fix": "Added _meta.latencyClass: fast."
+      },
+      {
+        "name": "get_preforeclosures",
+        "declaredLatency": "fast",
+        "actualLatency": "fast",
+        "fix": "Added _meta.latencyClass: fast."
+      },
+      {
+        "name": "list_supported_counties",
+        "declaredLatency": "fast",
+        "actualLatency": "fast",
+        "fix": "Added _meta.latencyClass: fast."
+      }
+    ],
+    "schemaCompleteness": "7/7 methods have non-trivial outputSchema; all return structuredContent on success paths."
+  },
+  "optimizationRuns": [
+    {
+      "iteration": 1,
+      "passRate": "0/8",
+      "failures": [
+        {
+          "promptId": "prompt_1_through_8",
+          "rootCause": "Context platform insufficient_allowance (Auto Pay disabled or $0); wallet/allowance not funded per skill prerequisites.",
+          "fix": "Enable Auto Pay and set allowance at https://ctxprotocol.com/settings; fund wallet per https://ctxprotocol.com/developer"
+        }
+      ]
+    }
+  ],
+  "showcasePrompts": [
+    "List Texas counties LienLens supports and which have both tax and pre-foreclosure data.",
+    "Pull distress signals for Harris County TX (48201)—tax liens over $5,000 filed in the last 90 days.",
+    "Show residential tax delinquencies in Harris County at least three years delinquent with a scheduled tax sale.",
+    "List pre-foreclosure filings in Harris County in the last six months with breakdown by filing type.",
+    "Rank the top 15 most distressed residential parcels in Harris County by composite distress score.",
+    "Compare distress activity between Harris TX, Cook IL, and Maricopa AZ—signal volume and average amounts.",
+    "Find Harris County properties with tax liens, at least two years delinquent, and no lis pendens or foreclosure notices yet.",
+    "Which commercial parcels in Harris County have scheduled tax sales this quarter?"
+  ],
+  "generatedDescription": "LienLens delivers county-level real estate distress intelligence—tax liens, lis pendens, notices of default, notices of trustee sale, and tax delinquencies—in one MCP toolkit for investors, analysts, and acquisition teams. Point it at a five-digit county FIPS code to pull paginated filings, run composite distress scoring, compare counties side by side, or screen for early-stage opportunities (heavy tax-lien exposure before foreclosure filings appear).\n\nFeatures\n• Coverage map: list_supported_counties shows supported counties, data flags, and ingestion status (optionally filter by state).\n• Raw feeds: get_distress_signals, get_tax_delinquencies, and get_preforeclosures return filterable, paginated county records with amounts, dates, and source attribution.\n• Ranked analysis: analyze_property_distress scores and sorts properties using severity, amounts owed, and recency.\n• Market comparison: compare_county_distress ranks counties by signal volume and average amounts (multi-county calls are heavier—use a small set of FIPS per request).\n• Opportunity lens: find_distress_opportunities targets properties with tax-lien stress but no lis pendens / NOD / NOTS yet.\n\nTry asking\n• \"List Texas counties LienLens supports and which have both tax and pre-foreclosure data.\"\n• \"Pull distress signals for Harris County TX (48201)—tax liens over $5,000 filed in the last 90 days.\"\n• \"Show pre-foreclosure filings in Harris County where the lender name contains Chase.\"\n• \"Rank the top 15 most distressed residential parcels in Harris County by composite distress score.\"\n• \"Compare distress activity between Harris TX (48201), Cook IL (17031), and Maricopa AZ (04013).\"\n• \"Find tax-delinquent residential properties in Harris County at least three years delinquent with no lis pendens.\"\n• \"Which commercial parcels in Harris County have a scheduled tax sale?\"\n\nAgent tips\n• Pass countyFips as a five-digit string. When FIPS is unknown, call list_supported_counties first.\n• Use page and pageSize on list endpoints (pageSize max 200); avoid assuming a single page is exhaustive when totalCount exceeds pageSize.\n• compare_county_distress issues sequential queries per county—treat it as a slow, multi-county operation and keep county lists small.\n• analyze_property_distress, find_distress_opportunities, and compare_county_distress use higher execute pricing than the lightweight list tools—plan batching accordingly.\n• Prefer structuredContent when present; it mirrors the JSON payload for schema-aware parsing.",
+  "descriptionUpdatedAt": "2026-04-10T20:51:42.825Z",
+  "signoff": {
+    "passRate": "0/8 (executions blocked)",
+    "highDifferentiationCount": 8,
+    "moderateDifferentiationCount": 0,
+    "lowDifferentiationCount": 0,
+    "overallStatus": "BLOCKED",
+    "overallStatusDetail": "Phase 6 could not run via Context tools.execute; listing description was still updated successfully. Re-run execute validation after Auto Pay / wallet setup."
+  }
+}

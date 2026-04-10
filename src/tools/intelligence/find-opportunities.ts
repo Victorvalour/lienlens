@@ -49,6 +49,7 @@ export const findOpportunitiesDefinition = {
   _meta: {
     surface: 'both',
     queryEligible: true,
+    latencyClass: 'fast',
     pricing: { executeUsd: '0.10' },
   },
 };

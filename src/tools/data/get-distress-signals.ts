@@ -42,6 +42,7 @@ export const getDistressSignalsDefinition = {
   _meta: {
     surface: 'both',
     queryEligible: true,
+    latencyClass: 'fast',
     pricing: { executeUsd: '0.001' },
   },
 };
