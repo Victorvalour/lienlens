@@ -2,6 +2,23 @@ import cron from 'node-cron';
 import { HarrisAdapter } from '../scrapers/harris-tx.js';
 import { CookAdapter } from '../scrapers/cook-il.js';
 import { MaricopaAdapter } from '../scrapers/maricopa-az.js';
+import { PhiladelphiaAdapter } from '../scrapers/philadelphia-pa.js';
+import { WayneAdapter } from '../scrapers/wayne-mi.js';
+import { LosAngelesAdapter } from '../scrapers/los-angeles-ca.js';
+import { MiamiDadeAdapter } from '../scrapers/miami-dade-fl.js';
+import { DallasAdapter } from '../scrapers/dallas-tx.js';
+import { KingAdapter } from '../scrapers/king-wa.js';
+import { ClarkAdapter } from '../scrapers/clark-nv.js';
+import { BrowardAdapter } from '../scrapers/broward-fl.js';
+import { TarrantAdapter } from '../scrapers/tarrant-tx.js';
+import { BexarAdapter } from '../scrapers/bexar-tx.js';
+import { NassauAdapter } from '../scrapers/nassau-ny.js';
+import { MecklenburgAdapter } from '../scrapers/mecklenburg-nc.js';
+import { FranklinAdapter } from '../scrapers/franklin-oh.js';
+import { HennepinAdapter } from '../scrapers/hennepin-mn.js';
+import { SanDiegoAdapter } from '../scrapers/san-diego-ca.js';
+import { RiversideAdapter } from '../scrapers/riverside-ca.js';
+import { SuffolkAdapter } from '../scrapers/suffolk-ny.js';
 import { normalizeAddress } from '../normalize/address.js';
 import { canonicalizeParcelId } from '../normalize/parcel-id.js';
 import { mapToSignalType } from '../normalize/distress-taxonomy.js';
@@ -91,6 +108,23 @@ export function startIngestionJobs(): void {
       new HarrisAdapter(),
       new CookAdapter(),
       new MaricopaAdapter(),
+      new PhiladelphiaAdapter(),
+      new WayneAdapter(),
+      new LosAngelesAdapter(),
+      new MiamiDadeAdapter(),
+      new DallasAdapter(),
+      new KingAdapter(),
+      new ClarkAdapter(),
+      new BrowardAdapter(),
+      new TarrantAdapter(),
+      new BexarAdapter(),
+      new NassauAdapter(),
+      new MecklenburgAdapter(),
+      new FranklinAdapter(),
+      new HennepinAdapter(),
+      new SanDiegoAdapter(),
+      new RiversideAdapter(),
+      new SuffolkAdapter(),
     ];
     for (const adapter of adapters) {
       await runAdapter(adapter);
@@ -104,6 +138,23 @@ export function startIngestionJobs(): void {
       new HarrisAdapter(),
       new CookAdapter(),
       new MaricopaAdapter(),
+      new PhiladelphiaAdapter(),
+      new WayneAdapter(),
+      new LosAngelesAdapter(),
+      new MiamiDadeAdapter(),
+      new DallasAdapter(),
+      new KingAdapter(),
+      new ClarkAdapter(),
+      new BrowardAdapter(),
+      new TarrantAdapter(),
+      new BexarAdapter(),
+      new NassauAdapter(),
+      new MecklenburgAdapter(),
+      new FranklinAdapter(),
+      new HennepinAdapter(),
+      new SanDiegoAdapter(),
+      new RiversideAdapter(),
+      new SuffolkAdapter(),
     ];
     for (const adapter of adapters) {
       await runAdapter(adapter);
