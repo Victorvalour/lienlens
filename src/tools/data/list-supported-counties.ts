@@ -1,8 +1,6 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { getCounties } from '../../db/queries.js';
 import { cacheKey, getCached, setCached } from '../../cache/redis.js';
-import type { County } from '../../types/index.js';
-
 export const listSupportedCountiesDefinition = {
   name: 'list_supported_counties',
   description:
@@ -39,45 +37,6 @@ interface ListSupportedCountiesArgs {
   state?: string;
 }
 
-const DEMO_COUNTIES: County[] = [
-  {
-    fips: '48201',
-    name: 'Harris County',
-    state: 'TX',
-    adapterName: 'HarrisAdapter',
-    hasTaxData: true,
-    hasPreforeclosureData: true,
-    hasCodeViolationData: false,
-    updateFrequency: 'daily',
-    recordCount: 150,
-    status: 'active',
-  },
-  {
-    fips: '17031',
-    name: 'Cook County',
-    state: 'IL',
-    adapterName: 'CookAdapter',
-    hasTaxData: true,
-    hasPreforeclosureData: true,
-    hasCodeViolationData: false,
-    updateFrequency: 'daily',
-    recordCount: 200,
-    status: 'active',
-  },
-  {
-    fips: '04013',
-    name: 'Maricopa County',
-    state: 'AZ',
-    adapterName: 'MaricopaAdapter',
-    hasTaxData: true,
-    hasPreforeclosureData: true,
-    hasCodeViolationData: false,
-    updateFrequency: 'daily',
-    recordCount: 120,
-    status: 'active',
-  },
-];
-
 export async function listSupportedCountiesHandler(
   args: ListSupportedCountiesArgs
 ): Promise<CallToolResult> {
@@ -91,12 +50,7 @@ export async function listSupportedCountiesHandler(
       };
     }
 
-    let counties = await getCounties(args.state);
-    if (counties.length === 0) {
-      counties = args.state
-        ? DEMO_COUNTIES.filter(c => c.state === args.state)
-        : DEMO_COUNTIES;
-    }
+    const counties = await getCounties(args.state);
 
     const result = {
       counties,

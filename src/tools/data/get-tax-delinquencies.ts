@@ -59,14 +59,6 @@ interface GetTaxDelinquenciesArgs {
   pageSize?: number;
 }
 
-const DEMO_DELINQUENCIES = [
-  { parcelId: '0660430030010', address: '1234 MAIN STREET HOUSTON TX 77002', ownerName: 'JOHNSON ROBERT L', propertyType: 'residential', amount: 8542.75, yearsDelinquent: 2, taxSaleScheduled: false, dateFiled: '2023-03-15' },
-  { parcelId: '0740220010050', address: '4567 WESTHEIMER ROAD HOUSTON TX 77056', ownerName: 'NGUYEN THANH V', propertyType: 'commercial', amount: 22100.00, yearsDelinquent: 3, taxSaleScheduled: false, dateFiled: '2022-11-01' },
-  { parcelId: '0553280050020', address: '555 BELLAIRE BOULEVARD HOUSTON TX 77401', ownerName: 'PATEL RAJESH K', propertyType: 'residential', amount: 12750.00, yearsDelinquent: 4, taxSaleScheduled: true, taxSaleDate: '2024-06-15', dateFiled: '2022-08-05' },
-  { parcelId: '1220340060030', address: '202 TRAVIS STREET HOUSTON TX 77002', ownerName: 'MARTINEZ ELENA', propertyType: 'commercial', amount: 49800.00, yearsDelinquent: 5, taxSaleScheduled: true, taxSaleDate: '2024-07-10', dateFiled: '2021-10-30' },
-  { parcelId: '0330180020030', address: '2200 LAMAR STREET HOUSTON TX 77003', ownerName: 'GARCIA MIGUEL', propertyType: 'residential', amount: 5200.50, yearsDelinquent: 2, taxSaleScheduled: false, dateFiled: '2023-06-20' },
-];
-
 export async function getTaxDelinquenciesHandler(
   args: GetTaxDelinquenciesArgs
 ): Promise<CallToolResult> {
@@ -93,20 +85,11 @@ export async function getTaxDelinquenciesHandler(
       pageSize,
     });
 
-    const finalDelinquencies = delinquencies.length > 0 ? delinquencies : DEMO_DELINQUENCIES.filter(d => {
-      if (args.minAmount && d.amount < args.minAmount) return false;
-      if (args.maxAmount && d.amount > args.maxAmount) return false;
-      if (args.minYearsDelinquent && (d.yearsDelinquent ?? 0) < args.minYearsDelinquent) return false;
-      if (args.propertyType && args.propertyType !== 'all' && d.propertyType !== args.propertyType) return false;
-      if (args.taxSaleScheduled !== undefined && d.taxSaleScheduled !== args.taxSaleScheduled) return false;
-      return true;
-    });
-
-    const totalAmountOutstanding = finalDelinquencies.reduce((sum, d) => sum + d.amount, 0);
+    const totalAmountOutstanding = delinquencies.reduce((sum, d) => sum + d.amount, 0);
 
     const result = {
-      delinquencies: finalDelinquencies,
-      totalCount: totalCount > 0 ? totalCount : finalDelinquencies.length,
+      delinquencies,
+      totalCount,
       totalAmountOutstanding,
       page,
       pageSize,

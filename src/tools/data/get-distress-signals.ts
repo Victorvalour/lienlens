@@ -58,14 +58,6 @@ interface GetDistressSignalsArgs {
   pageSize?: number;
 }
 
-const DEMO_SIGNALS = [
-  { parcelId: '0660430030010', address: '1234 MAIN STREET HOUSTON TX 77002', ownerName: 'JOHNSON ROBERT L', propertyType: 'residential', signalType: 'tax_lien', amount: 8542.75, dateFiled: '2023-03-15', source: 'Harris County Tax Assessor', yearsDelinquent: 2 },
-  { parcelId: '1150430060020', address: '789 KIRBY DRIVE HOUSTON TX 77019', ownerName: 'SMITH PATRICIA A', propertyType: 'residential', signalType: 'lis_pendens', amount: 185000, dateFiled: '2024-01-10', caseNumber: 'LP-2024-00451', lenderName: 'WELLS FARGO BANK NA', source: 'Harris County District Clerk' },
-  { parcelId: '0882910040010', address: '900 SHEPHERD DRIVE HOUSTON TX 77007', ownerName: 'LEE DAVID J', propertyType: 'residential', signalType: 'lis_pendens', amount: 210000, dateFiled: '2024-02-28', caseNumber: 'LP-2024-00812', lenderName: 'JPMORGAN CHASE BANK NA', source: 'Harris County District Clerk' },
-  { parcelId: '0770550080010', address: '8820 FONDREN ROAD HOUSTON TX 77074', ownerName: 'TRAN HIEN T', propertyType: 'residential', signalType: 'notice_of_default', amount: 135000, dateFiled: '2024-03-05', caseNumber: 'NOD-2024-00234', lenderName: 'USBANK HOME MORTGAGE', source: 'Harris County District Clerk' },
-  { parcelId: '0650430090040', address: '900 TELEPHONE ROAD HOUSTON TX 77023', ownerName: 'WHITE KEVIN S', propertyType: 'residential', signalType: 'notice_of_trustee_sale', amount: 158000, dateFiled: '2024-03-18', caseNumber: 'NOTS-2024-00567', lenderName: 'NATIONSTAR MORTGAGE', auctionDate: '2024-05-07', source: 'Harris County District Clerk' },
-];
-
 export async function getDistressSignalsHandler(
   args: GetDistressSignalsArgs
 ): Promise<CallToolResult> {
@@ -92,20 +84,13 @@ export async function getDistressSignalsHandler(
       pageSize,
     });
 
-    const finalSignals = signals.length > 0 ? signals : DEMO_SIGNALS.filter(s => {
-      if (args.signalType && s.signalType !== args.signalType) return false;
-      if (args.minAmount && (s.amount ?? 0) < args.minAmount) return false;
-      if (args.maxAmount && (s.amount ?? 0) > args.maxAmount) return false;
-      return true;
-    });
-
     const result = {
-      signals: finalSignals,
-      totalCount: totalCount > 0 ? totalCount : finalSignals.length,
+      signals,
+      totalCount,
       page,
       pageSize,
       fetchedAt: new Date().toISOString(),
-      dataSources: ['Harris County Tax Assessor', 'Harris County District Clerk'],
+      dataSources: ['County Tax Assessor', 'County District Clerk / Recorder'],
       dataFreshness: 'daily',
     };
 

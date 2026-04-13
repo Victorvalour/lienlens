@@ -136,10 +136,6 @@ export interface UpsertSignalData {
   metadata?: Record<string, unknown>;
 }
 
-export interface IngestionStats {
-  recordCount?: number;
-}
-
 export interface IngestionEndStats {
   recordsFound?: number;
   recordsNew?: number;
@@ -547,11 +543,16 @@ export async function upsertSignal(propertyId: number, data: UpsertSignalData): 
   ]);
 }
 
-export async function updateCountyIngestion(fips: string, stats: IngestionStats): Promise<void> {
+export async function updateCountyIngestion(fips: string): Promise<void> {
   try {
+    const countResult = await query(
+      `SELECT COUNT(*) FROM distress_signals ds JOIN properties p ON p.id = ds.property_id WHERE p.county_fips = $1`,
+      [fips]
+    );
+    const recordCount = Number(countResult.rows[0]?.['count'] ?? 0);
     await query(
       `UPDATE counties SET last_ingested_at = NOW(), record_count = $1, updated_at = NOW() WHERE fips = $2`,
-      [stats.recordCount ?? 0, fips]
+      [recordCount, fips]
     );
   } catch {
     // ignore

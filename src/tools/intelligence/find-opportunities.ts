@@ -77,45 +77,6 @@ interface OpportunityRecord {
   estimatedTimeToForeclosure: string;
 }
 
-const DEMO_OPPORTUNITIES: OpportunityRecord[] = [
-  {
-    parcelId: '0553280050020',
-    address: '555 BELLAIRE BOULEVARD HOUSTON TX 77401',
-    ownerName: 'PATEL RAJESH K',
-    propertyType: 'residential',
-    distressScore: 55,
-    signals: [{ type: 'tax_lien' as SignalType, amount: 12750, date: '2022-08-05', source: 'Harris County Tax Assessor' }],
-    actionabilityRating: 'warm' as ActionabilityRating,
-    daysSinceFirstSignal: 610,
-    yearsDelinquent: 4,
-    estimatedTimeToForeclosure: '12–18 months',
-  },
-  {
-    parcelId: '0660430030010',
-    address: '1234 MAIN STREET HOUSTON TX 77002',
-    ownerName: 'JOHNSON ROBERT L',
-    propertyType: 'residential',
-    distressScore: 48,
-    signals: [{ type: 'tax_lien' as SignalType, amount: 8542.75, date: '2023-03-15', source: 'Harris County Tax Assessor' }],
-    actionabilityRating: 'warm' as ActionabilityRating,
-    daysSinceFirstSignal: 380,
-    yearsDelinquent: 2,
-    estimatedTimeToForeclosure: '18–24 months',
-  },
-  {
-    parcelId: '0330180020030',
-    address: '2200 LAMAR STREET HOUSTON TX 77003',
-    ownerName: 'GARCIA MIGUEL',
-    propertyType: 'residential',
-    distressScore: 45,
-    signals: [{ type: 'tax_lien' as SignalType, amount: 5200.50, date: '2023-06-20', source: 'Harris County Tax Assessor' }],
-    actionabilityRating: 'warm' as ActionabilityRating,
-    daysSinceFirstSignal: 284,
-    yearsDelinquent: 2,
-    estimatedTimeToForeclosure: '18–24 months',
-  },
-];
-
 function estimateTimeToForeclosure(yearsDelinquent: number): string {
   if (yearsDelinquent >= 5) return '3–6 months';
   if (yearsDelinquent >= 4) return '6–12 months';
@@ -143,53 +104,42 @@ export async function findOpportunitiesHandler(args: FindOpportunitiesArgs): Pro
       limit: limit * 5,
     });
 
-    let opportunities: OpportunityRecord[];
+    const taxOnlyProperties = propertiesWithSignals.filter(p => {
+      const hasForeclosureSignal = p.signals.some(s => FORECLOSURE_TYPES.has(s.signalType as string));
+      const maxYears = Math.max(...p.signals.map(s => s.yearsDelinquent ?? 0));
+      return !hasForeclosureSignal && maxYears >= minYears &&
+        (args.maxYearsDelinquent === undefined || maxYears <= args.maxYearsDelinquent);
+    });
 
-    if (propertiesWithSignals.length > 0) {
-      const taxOnlyProperties = propertiesWithSignals.filter(p => {
-        const hasForeclosureSignal = p.signals.some(s => FORECLOSURE_TYPES.has(s.signalType as string));
-        const maxYears = Math.max(...p.signals.map(s => s.yearsDelinquent ?? 0));
-        return !hasForeclosureSignal && maxYears >= minYears &&
-          (args.maxYearsDelinquent === undefined || maxYears <= args.maxYearsDelinquent);
-      });
+    const opportunities: OpportunityRecord[] = taxOnlyProperties.slice(0, limit).map(p => {
+      const score = calculateDistressScore(p.signals);
+      const maxYears = Math.max(...p.signals.map(s => s.yearsDelinquent ?? 0));
+      const firstSignalDate = p.signals
+        .filter(s => s.dateFiled)
+        .map(s => new Date(s.dateFiled!).getTime())
+        .sort((a, b) => a - b)[0];
 
-      opportunities = taxOnlyProperties.slice(0, limit).map(p => {
-        const score = calculateDistressScore(p.signals);
-        const maxYears = Math.max(...p.signals.map(s => s.yearsDelinquent ?? 0));
-        const firstSignalDate = p.signals
-          .filter(s => s.dateFiled)
-          .map(s => new Date(s.dateFiled!).getTime())
-          .sort((a, b) => a - b)[0];
-
-        const actionabilityRating: ActionabilityRating = score >= 70 ? 'hot' : score >= 40 ? 'warm' : 'cold';
-        return {
-          parcelId: p.parcelId,
-          address: p.address,
-          ownerName: p.ownerName,
-          propertyType: p.propertyType,
-          distressScore: score,
-          signals: p.signals.map(s => ({
-            type: s.signalType as SignalType,
-            amount: s.amount,
-            date: s.dateFiled,
-            source: s.source,
-          })),
-          actionabilityRating,
-          daysSinceFirstSignal: firstSignalDate
-            ? Math.floor((Date.now() - firstSignalDate) / (1000 * 60 * 60 * 24))
-            : 0,
-          yearsDelinquent: maxYears,
-          estimatedTimeToForeclosure: estimateTimeToForeclosure(maxYears),
-        };
-      });
-    } else {
-      opportunities = DEMO_OPPORTUNITIES.filter(o => {
-        if (args.propertyType && args.propertyType !== 'all' && o.propertyType !== args.propertyType) return false;
-        if (o.yearsDelinquent < minYears) return false;
-        if (args.maxYearsDelinquent !== undefined && o.yearsDelinquent > args.maxYearsDelinquent) return false;
-        return true;
-      }).slice(0, limit);
-    }
+      const actionabilityRating: ActionabilityRating = score >= 70 ? 'hot' : score >= 40 ? 'warm' : 'cold';
+      return {
+        parcelId: p.parcelId,
+        address: p.address,
+        ownerName: p.ownerName,
+        propertyType: p.propertyType,
+        distressScore: score,
+        signals: p.signals.map(s => ({
+          type: s.signalType as SignalType,
+          amount: s.amount,
+          date: s.dateFiled,
+          source: s.source,
+        })),
+        actionabilityRating,
+        daysSinceFirstSignal: firstSignalDate
+          ? Math.floor((Date.now() - firstSignalDate) / (1000 * 60 * 60 * 24))
+          : 0,
+        yearsDelinquent: maxYears,
+        estimatedTimeToForeclosure: estimateTimeToForeclosure(maxYears),
+      };
+    });
 
     const avgDistressScore = opportunities.length > 0
       ? Math.round(opportunities.reduce((s, o) => s + o.distressScore, 0) / opportunities.length)

@@ -60,7 +60,7 @@ async function runAdapter(adapter: BaseAdapter): Promise<void> {
       }
     }
 
-    await updateCountyIngestion(adapter.countyFips, { recordCount: recordsNew });
+    await updateCountyIngestion(adapter.countyFips);
     await logIngestionEnd(logId, {
       recordsFound,
       recordsNew,
@@ -84,6 +84,20 @@ async function runAdapter(adapter: BaseAdapter): Promise<void> {
 }
 
 export function startIngestionJobs(): void {
+  // Run initial ingestion immediately on startup
+  (async () => {
+    console.log('[Ingest] Running initial ingestion...');
+    const adapters: BaseAdapter[] = [
+      new HarrisAdapter(),
+      new CookAdapter(),
+      new MaricopaAdapter(),
+    ];
+    for (const adapter of adapters) {
+      await runAdapter(adapter);
+    }
+    console.log('[Ingest] Initial ingestion complete.');
+  })().catch(err => console.error('[Ingest] Initial ingestion error:', err));
+
   cron.schedule('0 2 * * *', async () => {
     console.log('[Ingest] Starting daily ingestion...');
     const adapters: BaseAdapter[] = [

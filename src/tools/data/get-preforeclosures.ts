@@ -57,14 +57,6 @@ interface GetPreforeclosuresArgs {
   pageSize?: number;
 }
 
-const DEMO_FILINGS = [
-  { parcelId: '1150430060020', address: '789 KIRBY DRIVE HOUSTON TX 77019', ownerName: 'SMITH PATRICIA A', propertyType: 'residential', signalType: 'lis_pendens', amount: 185000, dateFiled: '2024-01-10', caseNumber: 'LP-2024-00451', lenderName: 'WELLS FARGO BANK NA' },
-  { parcelId: '0882910040010', address: '900 SHEPHERD DRIVE HOUSTON TX 77007', ownerName: 'LEE DAVID J', propertyType: 'residential', signalType: 'lis_pendens', amount: 210000, dateFiled: '2024-02-28', caseNumber: 'LP-2024-00812', lenderName: 'JPMORGAN CHASE BANK NA' },
-  { parcelId: '0770550080010', address: '8820 FONDREN ROAD HOUSTON TX 77074', ownerName: 'TRAN HIEN T', propertyType: 'residential', signalType: 'notice_of_default', amount: 135000, dateFiled: '2024-03-05', caseNumber: 'NOD-2024-00234', lenderName: 'USBANK HOME MORTGAGE' },
-  { parcelId: '0650430090040', address: '900 TELEPHONE ROAD HOUSTON TX 77023', ownerName: 'WHITE KEVIN S', propertyType: 'residential', signalType: 'notice_of_trustee_sale', amount: 158000, dateFiled: '2024-03-18', caseNumber: 'NOTS-2024-00567', lenderName: 'NATIONSTAR MORTGAGE', auctionDate: '2024-05-07' },
-  { parcelId: '0990560070030', address: '200 MEMORIAL DRIVE HOUSTON TX 77007', ownerName: 'HALL VICTOR A', propertyType: 'residential', signalType: 'notice_of_default', amount: 295000, dateFiled: '2024-02-07', caseNumber: 'NOD-2024-00178', lenderName: 'FREEDOM MORTGAGE' },
-];
-
 export async function getPreforeclosuresHandler(
   args: GetPreforeclosuresArgs
 ): Promise<CallToolResult> {
@@ -90,21 +82,15 @@ export async function getPreforeclosuresHandler(
       pageSize,
     });
 
-    const finalFilings = filings.length > 0 ? filings : DEMO_FILINGS.filter(f => {
-      if (args.filingType && args.filingType !== 'all' && f.signalType !== args.filingType) return false;
-      if (args.lenderName && !f.lenderName?.toLowerCase().includes(args.lenderName.toLowerCase())) return false;
-      return true;
-    });
-
     const breakdownByType: Record<string, number> = {};
-    for (const f of finalFilings) {
-      const t = (f as { signalType: string }).signalType ?? 'unknown';
+    for (const f of filings) {
+      const t = f.signalType ?? 'unknown';
       breakdownByType[t] = (breakdownByType[t] ?? 0) + 1;
     }
 
     const result = {
-      filings: finalFilings,
-      totalCount: totalCount > 0 ? totalCount : finalFilings.length,
+      filings,
+      totalCount,
       breakdownByType,
       page,
       pageSize,

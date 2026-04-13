@@ -64,60 +64,6 @@ export interface AnalyzeDistressArgs {
   limit?: number;
 }
 
-const DEMO_PROPERTIES: DistressedProperty[] = [
-  {
-    parcelId: '0650430090040',
-    address: '900 TELEPHONE ROAD HOUSTON TX 77023',
-    ownerName: 'WHITE KEVIN S',
-    propertyType: 'residential',
-    distressScore: 82,
-    signals: [{ type: 'notice_of_trustee_sale', amount: 158000, date: '2024-03-18', source: 'Harris County District Clerk' }],
-    estimatedEquityPosition: -12000,
-    actionabilityRating: 'hot',
-    daysSinceFirstSignal: 14,
-  },
-  {
-    parcelId: '0990560070030',
-    address: '200 MEMORIAL DRIVE HOUSTON TX 77007',
-    ownerName: 'HALL VICTOR A',
-    propertyType: 'residential',
-    distressScore: 76,
-    signals: [{ type: 'notice_of_default', amount: 295000, date: '2024-02-07', source: 'Harris County District Clerk' }],
-    actionabilityRating: 'hot',
-    daysSinceFirstSignal: 49,
-  },
-  {
-    parcelId: '0770550080010',
-    address: '8820 FONDREN ROAD HOUSTON TX 77074',
-    ownerName: 'TRAN HIEN T',
-    propertyType: 'residential',
-    distressScore: 70,
-    signals: [{ type: 'notice_of_default', amount: 135000, date: '2024-03-05', source: 'Harris County District Clerk' }],
-    actionabilityRating: 'hot',
-    daysSinceFirstSignal: 26,
-  },
-  {
-    parcelId: '1220340060030',
-    address: '202 TRAVIS STREET HOUSTON TX 77002',
-    ownerName: 'MARTINEZ ELENA',
-    propertyType: 'commercial',
-    distressScore: 65,
-    signals: [{ type: 'tax_lien', amount: 49800, date: '2021-10-30', source: 'Harris County Tax Assessor' }],
-    actionabilityRating: 'warm',
-    daysSinceFirstSignal: 880,
-  },
-  {
-    parcelId: '0882910040010',
-    address: '900 SHEPHERD DRIVE HOUSTON TX 77007',
-    ownerName: 'LEE DAVID J',
-    propertyType: 'residential',
-    distressScore: 63,
-    signals: [{ type: 'lis_pendens', amount: 210000, date: '2024-02-28', source: 'Harris County District Clerk' }],
-    actionabilityRating: 'warm',
-    daysSinceFirstSignal: 28,
-  },
-];
-
 function getActionabilityRating(score: number): ActionabilityRating {
   if (score >= 70) return 'hot';
   if (score >= 40) return 'warm';
@@ -142,41 +88,32 @@ export async function analyzeDistressHandler(args: AnalyzeDistressArgs): Promise
       limit: limit * 3,
     });
 
-    let analyzed: DistressedProperty[];
+    let analyzed: DistressedProperty[] = propertiesWithSignals.map(p => {
+      const score = calculateDistressScore(p.signals);
+      const firstSignalDate = p.signals
+        .filter(s => s.dateFiled)
+        .map(s => new Date(s.dateFiled!).getTime())
+        .sort((a, b) => a - b)[0];
+      const daysSinceFirstSignal = firstSignalDate
+        ? Math.floor((Date.now() - firstSignalDate) / (1000 * 60 * 60 * 24))
+        : 0;
 
-    if (propertiesWithSignals.length > 0) {
-      analyzed = propertiesWithSignals.map(p => {
-        const score = calculateDistressScore(p.signals);
-        const firstSignalDate = p.signals
-          .filter(s => s.dateFiled)
-          .map(s => new Date(s.dateFiled!).getTime())
-          .sort((a, b) => a - b)[0];
-        const daysSinceFirstSignal = firstSignalDate
-          ? Math.floor((Date.now() - firstSignalDate) / (1000 * 60 * 60 * 24))
-          : 0;
-
-        return {
-          parcelId: p.parcelId,
-          address: p.address,
-          ownerName: p.ownerName,
-          propertyType: p.propertyType,
-          distressScore: score,
-          signals: p.signals.map(s => ({
-            type: s.signalType as SignalType,
-            amount: s.amount,
-            date: s.dateFiled,
-            source: s.source,
-          })),
-          actionabilityRating: getActionabilityRating(score),
-          daysSinceFirstSignal,
-        };
-      });
-    } else {
-      analyzed = DEMO_PROPERTIES.filter(p => {
-        if (args.propertyType && args.propertyType !== 'all' && p.propertyType !== args.propertyType) return false;
-        return true;
-      });
-    }
+      return {
+        parcelId: p.parcelId,
+        address: p.address,
+        ownerName: p.ownerName,
+        propertyType: p.propertyType,
+        distressScore: score,
+        signals: p.signals.map(s => ({
+          type: s.signalType as SignalType,
+          amount: s.amount,
+          date: s.dateFiled,
+          source: s.source,
+        })),
+        actionabilityRating: getActionabilityRating(score),
+        daysSinceFirstSignal,
+      };
+    });
 
     // Apply min score filter
     if (args.minDistressScore !== undefined) {

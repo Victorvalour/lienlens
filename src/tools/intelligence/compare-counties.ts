@@ -53,12 +53,6 @@ const COUNTY_NAMES: Record<string, string> = {
   '04013': 'Maricopa County, AZ',
 };
 
-const DEMO_STATS: Record<string, { totalSignals: number; avgAmount: number; trend: TrendDirection }> = {
-  '48201': { totalSignals: 150, avgAmount: 18400, trend: 'increasing' },
-  '17031': { totalSignals: 200, avgAmount: 21500, trend: 'stable' },
-  '04013': { totalSignals: 120, avgAmount: 15800, trend: 'increasing' },
-};
-
 export async function compareCountiesHandler(args: CompareCountiesArgs): Promise<CallToolResult> {
   try {
     const key = cacheKey('compare_county_distress', args);
@@ -86,16 +80,11 @@ export async function compareCountiesHandler(args: CompareCountiesArgs): Promise
         pageSize: 200,
       });
 
-      const useDemo = totalCount === 0 && signals.length === 0;
-      const stats = useDemo ? DEMO_STATS[fips] : null;
-
-      const totalSignals = useDemo ? (stats?.totalSignals ?? 0) : totalCount;
-      const avgAmount = useDemo
-        ? (stats?.avgAmount ?? 0)
-        : signals.length > 0
-          ? Math.round(signals.reduce((s, sig) => s + (sig.amount ?? 0), 0) / signals.length)
-          : 0;
-      const trend: TrendDirection = useDemo ? (stats?.trend ?? 'stable') : 'stable';
+      const totalSignals = totalCount;
+      const avgAmount = signals.length > 0
+        ? Math.round(signals.reduce((s, sig) => s + (sig.amount ?? 0), 0) / signals.length)
+        : 0;
+      const trend: TrendDirection = 'stable';
 
       rankings.push({
         fips,
