@@ -1,6 +1,201 @@
-// TODO: implement real HTTP scraping
+// Seed data — Maricopa County does not offer public bulk data API. Replace with real scraping when bulk access is obtained via Arizona public records request.
 import { BaseAdapter } from './base-adapter.js';
 import type { ScrapedRecord } from './base-adapter.js';
+
+const MARICOPA_STREETS = [
+  'E McDowell Rd', 'W Camelback Rd', 'N 7th Ave', 'S Central Ave', 'E Thomas Rd',
+  'S Mill Ave', 'W Indian School Rd', 'E Camelback Rd', 'W Bethany Home Rd', 'E Southern Ave',
+  'W Peoria Ave', 'S Rural Rd', 'E Baseline Rd', 'W Thunderbird Rd', 'E Van Buren St',
+  'W Guadalupe Rd', 'S Dobson Rd', 'N 51st Ave', 'E Osborn Rd', 'E Apache Blvd',
+  'N Scottsdale Rd', 'E Shea Blvd', 'W Bell Rd', 'N 19th Ave', 'E Chandler Blvd',
+  'W Ray Rd', 'S Gilbert Rd', 'N Cave Creek Rd', 'E University Dr', 'W Olive Ave',
+  'S 48th St', 'N 75th Ave', 'E Warner Rd', 'W Glendale Ave', 'S Arizona Ave',
+  'N Dysart Rd', 'E Elliot Rd', 'W Buckeye Rd', 'S Power Rd', 'N 32nd St',
+  'E Greenway Rd', 'W Deer Valley Rd', 'S Country Club Dr', 'N 43rd Ave', 'E Riggs Rd',
+  'W Pinnacle Peak Rd', 'S Alma School Rd', 'N 67th Ave', 'E Williams Field Rd', 'W Pecos Rd',
+];
+
+interface CityZip { city: string; zip: string; }
+
+const MARICOPA_CITIES: CityZip[] = [
+  { city: 'Phoenix', zip: '85001' }, { city: 'Phoenix', zip: '85003' }, { city: 'Phoenix', zip: '85004' },
+  { city: 'Phoenix', zip: '85006' }, { city: 'Phoenix', zip: '85007' }, { city: 'Phoenix', zip: '85008' },
+  { city: 'Phoenix', zip: '85009' }, { city: 'Phoenix', zip: '85012' }, { city: 'Phoenix', zip: '85013' },
+  { city: 'Phoenix', zip: '85014' }, { city: 'Phoenix', zip: '85015' }, { city: 'Phoenix', zip: '85016' },
+  { city: 'Phoenix', zip: '85017' }, { city: 'Phoenix', zip: '85018' }, { city: 'Phoenix', zip: '85019' },
+  { city: 'Phoenix', zip: '85021' }, { city: 'Phoenix', zip: '85022' }, { city: 'Phoenix', zip: '85023' },
+  { city: 'Phoenix', zip: '85029' }, { city: 'Phoenix', zip: '85031' }, { city: 'Phoenix', zip: '85032' },
+  { city: 'Phoenix', zip: '85033' }, { city: 'Phoenix', zip: '85034' }, { city: 'Phoenix', zip: '85035' },
+  { city: 'Phoenix', zip: '85037' }, { city: 'Phoenix', zip: '85040' }, { city: 'Phoenix', zip: '85041' },
+  { city: 'Phoenix', zip: '85042' }, { city: 'Phoenix', zip: '85043' }, { city: 'Phoenix', zip: '85044' },
+  { city: 'Phoenix', zip: '85045' }, { city: 'Phoenix', zip: '85048' }, { city: 'Phoenix', zip: '85050' },
+  { city: 'Phoenix', zip: '85051' }, { city: 'Phoenix', zip: '85053' }, { city: 'Phoenix', zip: '85054' },
+  { city: 'Tempe', zip: '85281' }, { city: 'Tempe', zip: '85282' }, { city: 'Tempe', zip: '85283' },
+  { city: 'Tempe', zip: '85284' }, { city: 'Mesa', zip: '85201' }, { city: 'Mesa', zip: '85202' },
+  { city: 'Mesa', zip: '85203' }, { city: 'Mesa', zip: '85204' }, { city: 'Mesa', zip: '85205' },
+  { city: 'Mesa', zip: '85206' }, { city: 'Mesa', zip: '85207' }, { city: 'Mesa', zip: '85208' },
+  { city: 'Mesa', zip: '85209' }, { city: 'Mesa', zip: '85210' }, { city: 'Mesa', zip: '85212' },
+  { city: 'Scottsdale', zip: '85250' }, { city: 'Scottsdale', zip: '85251' }, { city: 'Scottsdale', zip: '85253' },
+  { city: 'Scottsdale', zip: '85254' }, { city: 'Scottsdale', zip: '85255' }, { city: 'Scottsdale', zip: '85257' },
+  { city: 'Scottsdale', zip: '85258' }, { city: 'Scottsdale', zip: '85259' }, { city: 'Scottsdale', zip: '85260' },
+  { city: 'Scottsdale', zip: '85262' }, { city: 'Chandler', zip: '85224' }, { city: 'Chandler', zip: '85225' },
+  { city: 'Chandler', zip: '85226' }, { city: 'Chandler', zip: '85248' }, { city: 'Gilbert', zip: '85233' },
+  { city: 'Gilbert', zip: '85234' }, { city: 'Gilbert', zip: '85295' }, { city: 'Gilbert', zip: '85296' },
+  { city: 'Glendale', zip: '85301' }, { city: 'Glendale', zip: '85302' }, { city: 'Glendale', zip: '85303' },
+  { city: 'Glendale', zip: '85304' }, { city: 'Glendale', zip: '85305' }, { city: 'Glendale', zip: '85306' },
+  { city: 'Glendale', zip: '85307' }, { city: 'Glendale', zip: '85308' }, { city: 'Glendale', zip: '85310' },
+  { city: 'Peoria', zip: '85345' }, { city: 'Peoria', zip: '85380' }, { city: 'Peoria', zip: '85381' },
+  { city: 'Peoria', zip: '85382' }, { city: 'Peoria', zip: '85383' }, { city: 'Surprise', zip: '85374' },
+  { city: 'Surprise', zip: '85379' }, { city: 'Avondale', zip: '85323' }, { city: 'Goodyear', zip: '85338' },
+  { city: 'Buckeye', zip: '85326' }, { city: 'Tolleson', zip: '85353' }, { city: 'El Mirage', zip: '85335' },
+];
+
+const OWNER_FIRST = [
+  'James', 'Robert', 'Maria', 'Patricia', 'Michael', 'Linda', 'William', 'Barbara',
+  'David', 'Susan', 'Richard', 'Jessica', 'Joseph', 'Karen', 'Thomas', 'Nancy',
+  'Charles', 'Lisa', 'Daniel', 'Betty', 'Matthew', 'Dorothy', 'Anthony', 'Sandra',
+  'Donald', 'Ashley', 'Mark', 'Sarah', 'Paul', 'Kimberly', 'Steven', 'Donna',
+  'Andrew', 'Emily', 'Kenneth', 'Michelle', 'Joshua', 'Carol', 'George', 'Amanda',
+  'Kevin', 'Melissa', 'Brian', 'Deborah', 'Edward', 'Stephanie', 'Ronald', 'Rebecca',
+  'Timothy', 'Sharon', 'Jason', 'Laura', 'Jeffrey', 'Cynthia', 'Ryan', 'Kathleen',
+  'Jose', 'Maria', 'Juan', 'Carmen', 'Carlos', 'Rosa', 'Miguel', 'Elena',
+  'Rajesh', 'Priya', 'Amit', 'Sunita', 'Vijay', 'Lakshmi', 'Ramesh', 'Kavita',
+];
+
+const OWNER_LAST = [
+  'Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis',
+  'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson', 'Thomas',
+  'Taylor', 'Moore', 'Jackson', 'Martin', 'Lee', 'Perez', 'Thompson', 'White',
+  'Harris', 'Sanchez', 'Clark', 'Ramirez', 'Lewis', 'Robinson', 'Walker', 'Young',
+  'Allen', 'King', 'Wright', 'Scott', 'Torres', 'Nguyen', 'Hill', 'Flores',
+  'Green', 'Adams', 'Nelson', 'Baker', 'Hall', 'Rivera', 'Campbell', 'Mitchell',
+  'Carter', 'Roberts', 'Gomez', 'Phillips', 'Evans', 'Turner', 'Diaz', 'Parker',
+  'Cruz', 'Edwards', 'Collins', 'Reyes', 'Stewart', 'Morris', 'Morales', 'Murphy',
+  'Cook', 'Rogers', 'Gutierrez', 'Ortiz', 'Morgan', 'Cooper', 'Peterson', 'Bailey',
+  'Reed', 'Kelly', 'Howard', 'Ramos', 'Kim', 'Cox', 'Ward', 'Richardson',
+  'Patel', 'Shah', 'Kumar', 'Singh', 'Sharma', 'Gupta', 'Mehta', 'Desai',
+];
+
+const LENDERS = [
+  'Wells Fargo Bank NA', 'JPMorgan Chase Bank NA', 'Bank of America NA',
+  'Nationstar Mortgage', 'Rocket Mortgage', 'Freedom Mortgage', 'PennyMac Loan Services',
+  'LoanDepot', 'US Bank Home Mortgage', 'Citibank NA', 'United Wholesale Mortgage',
+  'NewRez LLC', 'Carrington Mortgage', 'Ocwen Loan Servicing', 'Arizona Mortgage Group',
+  'Pinnacle Bank', 'Movement Mortgage', 'Guild Mortgage', 'Guaranteed Rate Inc',
+  'Caliber Home Loans', 'PHH Mortgage', 'Mr Cooper', 'Flagstar Bank',
+];
+
+const PROPERTY_TYPES = ['residential', 'residential', 'residential', 'residential', 'commercial', 'commercial'];
+
+function seededRand(seed: number): number {
+  const x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+}
+
+function pick<T>(arr: T[], seed: number): T {
+  return arr[Math.floor(seededRand(seed) * arr.length)]!;
+}
+
+function randInt(min: number, max: number, seed: number): number {
+  return Math.floor(seededRand(seed) * (max - min + 1)) + min;
+}
+
+function formatDate(year: number, month: number, day: number): string {
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+function generateParcelId(index: number, seed: number): string {
+  const p1 = String(randInt(100, 999, seed + 1)).padStart(3, '0');
+  const p2 = String(randInt(100, 999, seed + 2)).padStart(3, '0');
+  const p3 = String(randInt(100, 999, seed + 3)).padStart(3, '0');
+  return `${p1}${p2}${p3}`;
+}
+
+function generateMaricopaRecords(): ScrapedRecord[] {
+  const records: ScrapedRecord[] = [];
+
+  for (let i = 0; i < 220; i++) {
+    const s = i * 19 + 43;
+    const signalRoll = seededRand(s);
+    let signalType: string;
+    if (signalRoll < 0.60) {
+      signalType = 'tax_lien';
+    } else if (signalRoll < 0.85) {
+      signalType = 'lis_pendens';
+    } else if (signalRoll < 0.95) {
+      signalType = 'notice_of_default';
+    } else {
+      signalType = 'notice_of_trustee_sale';
+    }
+
+    const streetNum = randInt(100, 15900, s + 4);
+    const street = pick(MARICOPA_STREETS, s + 5);
+    const cityZip = pick(MARICOPA_CITIES, s + 6);
+    const rawAddress = `${streetNum} ${street} ${cityZip.city} AZ ${cityZip.zip}`;
+
+    const ownerFirst = pick(OWNER_FIRST, s + 7);
+    const ownerLast = pick(OWNER_LAST, s + 8);
+    const ownerName = `${ownerLast.toUpperCase()} ${ownerFirst.toUpperCase()}`;
+
+    const propertyType = pick(PROPERTY_TYPES, s + 9);
+
+    const year = randInt(2021, 2024, s + 10);
+    const month = randInt(1, 12, s + 11);
+    const day = randInt(1, 28, s + 12);
+    const dateFiled = formatDate(year, month, day);
+
+    const rawParcelId = generateParcelId(i, s);
+
+    let amount: number;
+    let yearsDelinquent: number | undefined;
+    let caseNumber: string | undefined;
+    let lenderName: string | undefined;
+    let auctionDate: string | undefined;
+
+    const source: string = signalType === 'tax_lien'
+      ? 'Maricopa County Treasurer'
+      : signalType === 'lis_pendens'
+        ? 'Maricopa County Superior Court'
+        : 'Maricopa County Recorder';
+
+    if (signalType === 'tax_lien') {
+      amount = Math.round(seededRand(s + 13) * 79000 + 1000);
+      yearsDelinquent = randInt(1, 6, s + 14);
+    } else if (signalType === 'lis_pendens') {
+      amount = Math.round(seededRand(s + 13) * 450000 + 50000);
+      caseNumber = `LP-${year}-MC-${String(randInt(1000, 99999, s + 15)).padStart(5, '0')}`;
+      lenderName = pick(LENDERS, s + 16);
+    } else if (signalType === 'notice_of_default') {
+      amount = Math.round(seededRand(s + 13) * 320000 + 80000);
+      caseNumber = `NOD-${year}-MC-${String(randInt(1000, 99999, s + 15)).padStart(5, '0')}`;
+      lenderName = pick(LENDERS, s + 16);
+    } else {
+      amount = Math.round(seededRand(s + 13) * 290000 + 60000);
+      caseNumber = `NOTS-${year}-MC-${String(randInt(1000, 99999, s + 15)).padStart(5, '0')}`;
+      lenderName = pick(LENDERS, s + 16);
+      const auctionMonth = month < 12 ? month + 1 : 1;
+      const auctionYear  = month < 12 ? year : year + 1;
+      auctionDate = formatDate(auctionYear, auctionMonth, day);
+    }
+
+    records.push({
+      rawParcelId,
+      rawAddress,
+      ownerName,
+      propertyType,
+      signalType,
+      amount,
+      dateFiled,
+      caseNumber,
+      lenderName,
+      auctionDate,
+      yearsDelinquent,
+      source,
+    });
+  }
+
+  return records;
+}
 
 export class MaricopaAdapter extends BaseAdapter {
   countyFips = '04013';
@@ -8,239 +203,6 @@ export class MaricopaAdapter extends BaseAdapter {
   state = 'AZ';
 
   async scrape(): Promise<ScrapedRecord[]> {
-    return [
-      {
-        rawParcelId: '111200340',
-        rawAddress: '1234 E McDowell Rd Phoenix AZ 85006',
-        ownerName: 'SMITH BARRY D',
-        propertyType: 'residential',
-        signalType: 'tax_lien',
-        amount: 4320.00,
-        dateFiled: '2023-04-10',
-        yearsDelinquent: 2,
-        source: 'Maricopa County Treasurer',
-      },
-      {
-        rawParcelId: '212340050',
-        rawAddress: '5678 W Camelback Rd Glendale AZ 85301',
-        ownerName: 'REYES LOUISA M',
-        propertyType: 'residential',
-        signalType: 'notice_of_trustee_sale',
-        amount: 175000.00,
-        dateFiled: '2024-02-14',
-        caseNumber: 'NOTS-2024-00891',
-        lenderName: 'ARIZONA MORTGAGE GROUP',
-        auctionDate: '2024-04-16',
-        source: 'Maricopa County Recorder',
-      },
-      {
-        rawParcelId: '301560180',
-        rawAddress: '9000 S Central Ave Phoenix AZ 85042',
-        ownerName: 'JOHNSON CARLA P',
-        propertyType: 'residential',
-        signalType: 'tax_lien',
-        amount: 7800.50,
-        dateFiled: '2022-08-25',
-        yearsDelinquent: 3,
-        source: 'Maricopa County Treasurer',
-      },
-      {
-        rawParcelId: '133780090',
-        rawAddress: '2200 E Thomas Rd Phoenix AZ 85016',
-        ownerName: 'WILLIAMS DEREK A',
-        propertyType: 'residential',
-        signalType: 'lis_pendens',
-        amount: 198000.00,
-        dateFiled: '2024-01-19',
-        caseNumber: 'LP-2024-MC-00304',
-        lenderName: 'PINNACLE BANK',
-        source: 'Maricopa County Superior Court',
-      },
-      {
-        rawParcelId: '400230140',
-        rawAddress: '4400 N 7th Ave Phoenix AZ 85013',
-        ownerName: 'GARCIA JOSE L',
-        propertyType: 'residential',
-        signalType: 'tax_lien',
-        amount: 3600.00,
-        dateFiled: '2023-07-05',
-        yearsDelinquent: 1,
-        source: 'Maricopa County Treasurer',
-      },
-      {
-        rawParcelId: '501890260',
-        rawAddress: '1100 S Mill Ave Tempe AZ 85281',
-        ownerName: 'JONES PATRICIA N',
-        propertyType: 'commercial',
-        signalType: 'tax_lien',
-        amount: 29400.00,
-        dateFiled: '2021-12-01',
-        yearsDelinquent: 5,
-        source: 'Maricopa County Treasurer',
-      },
-      {
-        rawParcelId: '214560320',
-        rawAddress: '8800 W Indian School Rd Phoenix AZ 85037',
-        ownerName: 'BROWN LISA K',
-        propertyType: 'residential',
-        signalType: 'notice_of_default',
-        amount: 232000.00,
-        dateFiled: '2024-03-07',
-        caseNumber: 'NOD-2024-MC-00556',
-        lenderName: 'MOVEMENT MORTGAGE',
-        source: 'Maricopa County Recorder',
-      },
-      {
-        rawParcelId: '305410070',
-        rawAddress: '6700 E Camelback Rd Scottsdale AZ 85251',
-        ownerName: 'DAVIS MICHAEL F',
-        propertyType: 'residential',
-        signalType: 'lis_pendens',
-        amount: 415000.00,
-        dateFiled: '2024-02-01',
-        caseNumber: 'LP-2024-MC-00512',
-        lenderName: 'BANK OF AMERICA NA',
-        source: 'Maricopa County Superior Court',
-      },
-      {
-        rawParcelId: '112690200',
-        rawAddress: '3300 W Bethany Home Rd Phoenix AZ 85017',
-        ownerName: 'MILLER THOMAS R',
-        propertyType: 'residential',
-        signalType: 'tax_lien',
-        amount: 5550.00,
-        dateFiled: '2023-02-22',
-        yearsDelinquent: 2,
-        source: 'Maricopa County Treasurer',
-      },
-      {
-        rawParcelId: '430780130',
-        rawAddress: '4000 E Southern Ave Mesa AZ 85206',
-        ownerName: 'MARTINEZ ANGELA',
-        propertyType: 'residential',
-        signalType: 'notice_of_trustee_sale',
-        amount: 145000.00,
-        dateFiled: '2024-01-30',
-        caseNumber: 'NOTS-2024-MC-00422',
-        lenderName: 'LOANDEPOT',
-        auctionDate: '2024-03-26',
-        source: 'Maricopa County Recorder',
-      },
-      {
-        rawParcelId: '220150090',
-        rawAddress: '2500 W Peoria Ave Phoenix AZ 85029',
-        ownerName: 'WILSON BARBARA E',
-        propertyType: 'residential',
-        signalType: 'tax_lien',
-        amount: 2900.00,
-        dateFiled: '2024-01-12',
-        yearsDelinquent: 1,
-        source: 'Maricopa County Treasurer',
-      },
-      {
-        rawParcelId: '510390170',
-        rawAddress: '7200 S Rural Rd Tempe AZ 85283',
-        ownerName: 'TAYLOR ROBERT G',
-        propertyType: 'residential',
-        signalType: 'lis_pendens',
-        amount: 320000.00,
-        dateFiled: '2023-12-18',
-        caseNumber: 'LP-2023-MC-09876',
-        lenderName: 'WELLS FARGO BANK NA',
-        source: 'Maricopa County Superior Court',
-      },
-      {
-        rawParcelId: '314520280',
-        rawAddress: '1800 E Baseline Rd Chandler AZ 85225',
-        ownerName: 'ANDERSON HENRY J',
-        propertyType: 'residential',
-        signalType: 'tax_lien',
-        amount: 10200.00,
-        dateFiled: '2022-03-14',
-        yearsDelinquent: 4,
-        source: 'Maricopa County Treasurer',
-      },
-      {
-        rawParcelId: '421080060',
-        rawAddress: '3600 W Thunderbird Rd Phoenix AZ 85053',
-        ownerName: 'THOMAS CYNTHIA A',
-        propertyType: 'residential',
-        signalType: 'tax_lien',
-        amount: 6720.00,
-        dateFiled: '2023-06-09',
-        yearsDelinquent: 2,
-        source: 'Maricopa County Treasurer',
-      },
-      {
-        rawParcelId: '103450110',
-        rawAddress: '5000 E Van Buren St Phoenix AZ 85008',
-        ownerName: 'JACKSON PAUL R',
-        propertyType: 'commercial',
-        signalType: 'tax_lien',
-        amount: 37500.00,
-        dateFiled: '2021-09-28',
-        yearsDelinquent: 5,
-        source: 'Maricopa County Treasurer',
-      },
-      {
-        rawParcelId: '312870190',
-        rawAddress: '2100 W Guadalupe Rd Gilbert AZ 85233',
-        ownerName: 'WHITE NANCY L',
-        propertyType: 'residential',
-        signalType: 'notice_of_default',
-        amount: 267000.00,
-        dateFiled: '2024-02-25',
-        caseNumber: 'NOD-2024-MC-00645',
-        lenderName: 'NEWREZ LLC',
-        source: 'Maricopa County Recorder',
-      },
-      {
-        rawParcelId: '430220050',
-        rawAddress: '900 S Dobson Rd Mesa AZ 85202',
-        ownerName: 'HARRIS JEROME T',
-        propertyType: 'residential',
-        signalType: 'lis_pendens',
-        amount: 185000.00,
-        dateFiled: '2023-10-29',
-        caseNumber: 'LP-2023-MC-08441',
-        lenderName: 'PENNYMAC LOAN SERVICES',
-        source: 'Maricopa County Superior Court',
-      },
-      {
-        rawParcelId: '201340370',
-        rawAddress: '11000 N 51st Ave Glendale AZ 85304',
-        ownerName: 'CLARK FELICIA R',
-        propertyType: 'residential',
-        signalType: 'tax_lien',
-        amount: 4080.00,
-        dateFiled: '2023-09-03',
-        yearsDelinquent: 2,
-        source: 'Maricopa County Treasurer',
-      },
-      {
-        rawParcelId: '115670240',
-        rawAddress: '300 E Osborn Rd Phoenix AZ 85012',
-        ownerName: 'LEWIS FRANK D',
-        propertyType: 'residential',
-        signalType: 'tax_lien',
-        amount: 8950.00,
-        dateFiled: '2022-11-17',
-        yearsDelinquent: 3,
-        source: 'Maricopa County Treasurer',
-      },
-      {
-        rawParcelId: '512480090',
-        rawAddress: '1300 E Apache Blvd Tempe AZ 85281',
-        ownerName: 'ROBINSON KENDRA N',
-        propertyType: 'residential',
-        signalType: 'notice_of_trustee_sale',
-        amount: 120000.00,
-        dateFiled: '2024-03-12',
-        caseNumber: 'NOTS-2024-MC-00734',
-        lenderName: 'CARRINGTON MORTGAGE',
-        auctionDate: '2024-05-21',
-        source: 'Maricopa County Recorder',
-      },
-    ];
+    return generateMaricopaRecords();
   }
 }

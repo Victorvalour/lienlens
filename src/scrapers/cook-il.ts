@@ -1,6 +1,21 @@
-// TODO: implement real HTTP scraping
 import { BaseAdapter } from './base-adapter.js';
 import type { ScrapedRecord } from './base-adapter.js';
+
+const SOCRATA_URL = 'https://datacatalog.cookcountyil.gov/resource/55ju-2fs9.json';
+const PAGE_SIZE = 1000;
+
+interface SocrataRecord {
+  pin?: string;
+  tax_year?: string;
+  total_due?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  taxpayer_name?: string;
+  /* additional fields that may be present */
+  [key: string]: string | undefined;
+}
 
 export class CookAdapter extends BaseAdapter {
   countyFips = '17031';
@@ -8,236 +23,67 @@ export class CookAdapter extends BaseAdapter {
   state = 'IL';
 
   async scrape(): Promise<ScrapedRecord[]> {
-    return [
-      {
-        rawParcelId: '14251010010000',
-        rawAddress: '100 N State St Chicago IL 60601',
-        ownerName: 'DOWNTOWN PROPERTIES LLC',
-        propertyType: 'commercial',
-        signalType: 'tax_lien',
-        amount: 31500.00,
-        dateFiled: '2022-12-01',
-        yearsDelinquent: 4,
-        source: 'Cook County Treasurer',
-      },
-      {
-        rawParcelId: '20361020200010',
-        rawAddress: '3521 W Devon Ave Chicago IL 60659',
-        ownerName: 'KOWALSKI STEFAN',
-        propertyType: 'residential',
-        signalType: 'tax_lien',
-        amount: 6800.00,
-        dateFiled: '2023-05-18',
-        yearsDelinquent: 2,
-        source: 'Cook County Treasurer',
-      },
-      {
-        rawParcelId: '09251030050060',
-        rawAddress: '2244 S Michigan Ave Chicago IL 60616',
-        ownerName: 'JOHNSON DENISE R',
-        propertyType: 'residential',
-        signalType: 'lis_pendens',
-        amount: 145000.00,
-        dateFiled: '2024-01-08',
-        caseNumber: 'LP-2024-CH-00231',
-        lenderName: 'BMO HARRIS BANK NA',
-        source: 'Cook County Circuit Court',
-      },
-      {
-        rawParcelId: '17241050060020',
-        rawAddress: '5600 N Clark St Chicago IL 60660',
-        ownerName: 'ANDERSON PATRICIA',
-        propertyType: 'residential',
-        signalType: 'tax_lien',
-        amount: 9200.00,
-        dateFiled: '2022-09-15',
-        yearsDelinquent: 3,
-        source: 'Cook County Treasurer',
-      },
-      {
-        rawParcelId: '25192010080030',
-        rawAddress: '1800 W Chicago Ave Chicago IL 60622',
-        ownerName: 'NGUYEN LILY T',
-        propertyType: 'residential',
-        signalType: 'notice_of_default',
-        amount: 178000.00,
-        dateFiled: '2024-02-12',
-        caseNumber: 'NOD-2024-CH-00455',
-        lenderName: 'GUARANTEED RATE INC',
-        source: 'Cook County Circuit Court',
-      },
-      {
-        rawParcelId: '16283020040010',
-        rawAddress: '4200 N Kedzie Ave Chicago IL 60618',
-        ownerName: 'RODRIGUEZ CARLOS A',
-        propertyType: 'residential',
-        signalType: 'tax_lien',
-        amount: 4500.00,
-        dateFiled: '2023-10-25',
-        yearsDelinquent: 1,
-        source: 'Cook County Treasurer',
-      },
-      {
-        rawParcelId: '31081040030050',
-        rawAddress: '7800 S Halsted St Chicago IL 60620',
-        ownerName: 'WASHINGTON TAMARA B',
-        propertyType: 'residential',
-        signalType: 'lis_pendens',
-        amount: 112000.00,
-        dateFiled: '2023-11-30',
-        caseNumber: 'LP-2023-CH-09801',
-        lenderName: 'CALIBER HOME LOANS',
-        source: 'Cook County Circuit Court',
-      },
-      {
-        rawParcelId: '10244010050020',
-        rawAddress: '1600 E 56th St Chicago IL 60637',
-        ownerName: 'JACKSON RAYMOND',
-        propertyType: 'residential',
-        signalType: 'tax_lien',
-        amount: 7650.00,
-        dateFiled: '2022-06-08',
-        yearsDelinquent: 3,
-        source: 'Cook County Treasurer',
-      },
-      {
-        rawParcelId: '13332060070040',
-        rawAddress: '900 N Pulaski Rd Chicago IL 60651',
-        ownerName: 'PATEL MANISH R',
-        propertyType: 'commercial',
-        signalType: 'tax_lien',
-        amount: 18400.00,
-        dateFiled: '2021-11-20',
-        yearsDelinquent: 5,
-        source: 'Cook County Treasurer',
-      },
-      {
-        rawParcelId: '28163050020010',
-        rawAddress: '6100 S Cottage Grove Ave Chicago IL 60637',
-        ownerName: 'THOMPSON VERONICA L',
-        propertyType: 'residential',
-        signalType: 'notice_of_trustee_sale',
-        amount: 89000.00,
-        dateFiled: '2024-03-01',
-        caseNumber: 'NOTS-2024-CH-00321',
-        lenderName: 'OCWEN LOAN SERVICING',
-        auctionDate: '2024-04-29',
-        source: 'Cook County Circuit Court',
-      },
-      {
-        rawParcelId: '19211030090060',
-        rawAddress: '2350 W Armitage Ave Chicago IL 60647',
-        ownerName: 'MILLER BRIDGET A',
-        propertyType: 'residential',
-        signalType: 'lis_pendens',
-        amount: 220000.00,
-        dateFiled: '2024-01-22',
-        caseNumber: 'LP-2024-CH-00502',
-        lenderName: 'ROCKET MORTGAGE',
-        source: 'Cook County Circuit Court',
-      },
-      {
-        rawParcelId: '06184020060030',
-        rawAddress: '8500 N Milwaukee Ave Niles IL 60714',
-        ownerName: 'WILSON JAMES K',
-        propertyType: 'residential',
-        signalType: 'tax_lien',
-        amount: 5100.00,
-        dateFiled: '2023-07-14',
-        yearsDelinquent: 2,
-        source: 'Cook County Treasurer',
-      },
-      {
-        rawParcelId: '22342070010050',
-        rawAddress: '3700 W Ogden Ave Chicago IL 60623',
-        ownerName: 'HERNANDEZ MARIA G',
-        propertyType: 'residential',
-        signalType: 'tax_lien',
-        amount: 3200.50,
-        dateFiled: '2024-01-05',
-        yearsDelinquent: 1,
-        source: 'Cook County Treasurer',
-      },
-      {
-        rawParcelId: '33071080040020',
-        rawAddress: '12200 S Halsted St Chicago IL 60628',
-        ownerName: 'DAVIS ALPHONSO T',
-        propertyType: 'residential',
-        signalType: 'lis_pendens',
-        amount: 96000.00,
-        dateFiled: '2023-09-19',
-        caseNumber: 'LP-2023-CH-07654',
-        lenderName: 'NATIONSTAR MORTGAGE',
-        source: 'Cook County Circuit Court',
-      },
-      {
-        rawParcelId: '05262040070010',
-        rawAddress: '750 Waukegan Rd Deerfield IL 60015',
-        ownerName: 'CHEN FONG L',
-        propertyType: 'residential',
-        signalType: 'tax_lien',
-        amount: 14200.00,
-        dateFiled: '2022-04-28',
-        yearsDelinquent: 4,
-        source: 'Cook County Treasurer',
-      },
-      {
-        rawParcelId: '14331050050030',
-        rawAddress: '400 W Ontario St Chicago IL 60654',
-        ownerName: 'SCOTT BRENDA A',
-        propertyType: 'commercial',
-        signalType: 'notice_of_default',
-        amount: 520000.00,
-        dateFiled: '2024-02-20',
-        caseNumber: 'NOD-2024-CH-00598',
-        lenderName: 'STERLING BANK',
-        source: 'Cook County Circuit Court',
-      },
-      {
-        rawParcelId: '20281060080040',
-        rawAddress: '6000 N Broadway Chicago IL 60660',
-        ownerName: 'TAYLOR MARCUS E',
-        propertyType: 'residential',
-        signalType: 'tax_lien',
-        amount: 8900.00,
-        dateFiled: '2022-12-16',
-        yearsDelinquent: 3,
-        source: 'Cook County Treasurer',
-      },
-      {
-        rawParcelId: '11193030020060',
-        rawAddress: '2900 S Indiana Ave Chicago IL 60616',
-        ownerName: 'MOORE LATONYA B',
-        propertyType: 'residential',
-        signalType: 'tax_lien',
-        amount: 4750.00,
-        dateFiled: '2023-11-07',
-        yearsDelinquent: 2,
-        source: 'Cook County Treasurer',
-      },
-      {
-        rawParcelId: '26313070090020',
-        rawAddress: '1100 S Wabash Ave Chicago IL 60605',
-        ownerName: 'ADAMS KENNETH P',
-        propertyType: 'residential',
-        signalType: 'lis_pendens',
-        amount: 165000.00,
-        dateFiled: '2023-10-11',
-        caseNumber: 'LP-2023-CH-08345',
-        lenderName: 'UNITED WHOLESALE MORTGAGE',
-        source: 'Cook County Circuit Court',
-      },
-      {
-        rawParcelId: '34091020030010',
-        rawAddress: '14500 S Torrence Ave Burnham IL 60633',
-        ownerName: 'CARTER DENISE M',
-        propertyType: 'residential',
-        signalType: 'tax_lien',
-        amount: 11300.00,
-        dateFiled: '2021-08-22',
-        yearsDelinquent: 5,
-        source: 'Cook County Treasurer',
-      },
-    ];
+    const records: ScrapedRecord[] = [];
+    let offset = 0;
+
+    try {
+      while (true) {
+        const url = `${SOCRATA_URL}?$limit=${PAGE_SIZE}&$offset=${offset}`;
+        const response = await fetch(url, {
+          headers: { 'Accept': 'application/json' },
+          signal: AbortSignal.timeout(30_000),
+        });
+
+        if (!response.ok) {
+          console.error(`[CookAdapter] Socrata API error: ${response.status} ${response.statusText}`);
+          break;
+        }
+
+        const batch: SocrataRecord[] = await response.json() as SocrataRecord[];
+        if (!Array.isArray(batch) || batch.length === 0) break;
+
+        for (const row of batch) {
+          const pin = row['pin'] ?? '';
+          if (!pin) continue;
+
+          const addressParts: string[] = [];
+          if (row['address']) addressParts.push(row['address']);
+          if (row['city'])    addressParts.push(row['city']);
+          if (row['state'])   addressParts.push(row['state']);
+          else                addressParts.push('IL');
+          if (row['zip'])     addressParts.push(row['zip']);
+          const rawAddress = addressParts.length > 1
+            ? addressParts.join(' ')
+            : `PIN ${pin} Chicago IL`;
+
+          const totalDue = row['total_due'] ? parseFloat(row['total_due']) : undefined;
+          const taxYear  = row['tax_year']  ? parseInt(row['tax_year'], 10) : undefined;
+          const currentYear = new Date().getFullYear();
+          const yearsDelinquent = taxYear && taxYear > 0
+            ? currentYear - taxYear
+            : undefined;
+
+          records.push({
+            rawParcelId: pin,
+            rawAddress,
+            ownerName: row['taxpayer_name'] ?? undefined,
+            propertyType: 'residential',
+            signalType: 'tax_lien',
+            amount: Number.isFinite(totalDue) ? totalDue : undefined,
+            dateFiled: taxYear ? `${taxYear}-01-01` : undefined,
+            yearsDelinquent,
+            source: 'Cook County Treasurer - Annual Tax Sale',
+          });
+        }
+
+        if (batch.length < PAGE_SIZE) break;
+        offset += PAGE_SIZE;
+      }
+    } catch (err) {
+      console.error('[CookAdapter] Failed to fetch Socrata data:', err);
+    }
+
+    console.log(`[CookAdapter] Fetched ${records.length} records from Socrata API`);
+    return records;
   }
 }

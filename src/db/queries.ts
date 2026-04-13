@@ -509,7 +509,7 @@ export async function upsertSignal(propertyId: number, data: UpsertSignalData): 
       raw_label, source, lender_name, attorney_name, auction_date,
       years_delinquent, last_payment_date, tax_sale_scheduled, tax_sale_date, metadata
     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
-    ON CONFLICT (property_id, signal_type, COALESCE(case_number, ''), COALESCE(date_filed::TEXT, ''))
+    ON CONFLICT (property_id, signal_type, COALESCE(case_number, ''), COALESCE(date_filed, DATE '1900-01-01'))
     DO UPDATE SET
       amount = EXCLUDED.amount,
       raw_label = EXCLUDED.raw_label,
