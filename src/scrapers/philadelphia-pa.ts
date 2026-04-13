@@ -7,9 +7,19 @@ const PAGE_SIZE = 1000;
 
 function getField(attrs: Record<string, unknown>, ...candidates: string[]): string | undefined {
   for (const key of candidates) {
-    const val = attrs[key];
-    if (val !== undefined && val !== null && val !== '') {
-      return String(val);
+    // Try exact match first
+    if (attrs[key] !== undefined && attrs[key] !== null && attrs[key] !== '') {
+      return String(attrs[key]);
+    }
+    // Try uppercase
+    const upper = key.toUpperCase();
+    if (attrs[upper] !== undefined && attrs[upper] !== null && attrs[upper] !== '') {
+      return String(attrs[upper]);
+    }
+    // Try lowercase
+    const lower = key.toLowerCase();
+    if (attrs[lower] !== undefined && attrs[lower] !== null && attrs[lower] !== '') {
+      return String(attrs[lower]);
     }
   }
   return undefined;
@@ -62,33 +72,47 @@ export class PhiladelphiaAdapter extends BaseAdapter {
         for (const feature of features) {
           const attrs = feature.attributes;
 
-          const parcelId = getField(attrs, 'opa_number', 'opa_account_num', 'parcel_number', 'account_number');
+          const parcelId = getField(attrs, 'OPA_NUMBER', 'opa_number', 'opa_account_num', 'parcel_number', 'account_number');
           if (!parcelId) continue;
 
-          const address = getField(attrs, 'location', 'address', 'property_address', 'street_address');
-          const zip = getField(attrs, 'zip_code', 'zipcode', 'zip');
+          const address = getField(attrs, 'STREET_ADDRESS', 'location', 'address', 'property_address', 'street_address');
+          const zip = getField(attrs, 'ZIP_CODE', 'zip_code', 'zipcode', 'zip');
           const rawAddress = address
             ? `${address} Philadelphia PA${zip ? ` ${zip}` : ''}`
             : `OPA ${parcelId} Philadelphia PA`;
 
-          const owner = getField(attrs, 'owner', 'owner_name', 'taxpayer_name');
+          const owner = getField(attrs, 'OWNER', 'owner', 'owner_name', 'taxpayer_name');
 
-          const amountStr = getField(attrs, 'total_due', 'total', 'principal_due', 'principal', 'amount_due');
+          const amountStr = getField(attrs, 'TOTAL_DUE', 'total_due', 'total', 'PRINCIPAL_DUE', 'principal_due', 'principal', 'amount_due');
           const amount = amountStr ? parseFloat(amountStr) : undefined;
 
-          const yearStr = getField(attrs, 'tax_period', 'tax_year', 'year_due', 'year');
+          const numYearsOwed = getField(attrs, 'NUM_YEARS_OWED', 'num_years_owed');
+          const yearStr = getField(attrs, 'OLDEST_YEAR_OWED', 'MOST_RECENT_YEAR_OWED', 'tax_period', 'tax_year', 'year_due', 'year');
           const year = yearStr ? parseInt(yearStr, 10) : undefined;
           const currentYear = new Date().getFullYear();
-          const yearsDelinquent =
-            year && Number.isFinite(year) ? currentYear - year : undefined;
+          const yearsDelinquent = numYearsOwed
+            ? Number(numYearsOwed)
+            : (year && Number.isFinite(year) ? currentYear - year : undefined);
 
-          const dateFiled = year && Number.isFinite(year) ? `${year}-01-01` : undefined;
+          const oldestYear = getField(attrs, 'OLDEST_YEAR_OWED', 'oldest_year_owed');
+          const dateFiled = oldestYear
+            ? `${oldestYear}-01-01`
+            : (year && Number.isFinite(year) ? `${year}-01-01` : undefined);
+
+          const buildingCategory = getField(attrs, 'BUILDING_CATEGORY', 'building_category', 'GENERAL_BUILDING_DESCRIPTION', 'general_building_description');
+          const cat = buildingCategory?.toLowerCase() ?? '';
+          const propertyType =
+            cat.includes('commercial') || cat.includes('office') || cat.includes('store') || cat.includes('industrial')
+              ? 'commercial'
+              : cat.includes('land') || cat.includes('vacant')
+                ? 'land'
+                : 'residential';
 
           records.push({
             rawParcelId: parcelId,
             rawAddress,
             ownerName: owner,
-            propertyType: 'residential',
+            propertyType,
             signalType: 'tax_lien',
             amount: amount !== undefined && Number.isFinite(amount) ? amount : undefined,
             dateFiled,
