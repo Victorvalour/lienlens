@@ -53,14 +53,21 @@ CREATE TABLE IF NOT EXISTS distress_signals (
   tax_sale_scheduled  BOOLEAN DEFAULT FALSE,
   tax_sale_date       DATE,
   metadata            JSONB,
-  ingested_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE (property_id, signal_type, COALESCE(case_number, ''), COALESCE(date_filed::TEXT, ''))
+  ingested_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_signals_property ON distress_signals(property_id);
 CREATE INDEX IF NOT EXISTS idx_signals_type ON distress_signals(signal_type);
 CREATE INDEX IF NOT EXISTS idx_signals_date_filed ON distress_signals(date_filed);
 CREATE INDEX IF NOT EXISTS idx_signals_amount ON distress_signals(amount);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_distress_signals_dedupe
+ON distress_signals (
+  property_id,
+  signal_type,
+  COALESCE(case_number, ''),
+  COALESCE(date_filed, DATE '1900-01-01')
+);
 
 CREATE TABLE IF NOT EXISTS ingestion_logs (
   id            SERIAL PRIMARY KEY,
