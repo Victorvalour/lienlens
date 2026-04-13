@@ -5,50 +5,18 @@ const SOCRATA_URL = 'https://datacatalog.cookcountyil.gov/resource/55ju-2fs9.jso
 const PAGE_SIZE = 1000;
 
 interface SocrataRecord {
-  /* PIN / parcel identifier */
+  tax_sale_year?: string;
   pin?: string;
-  pin_number?: string;
-  property_index_number?: string;
-  /* tax year */
-  tax_year?: string;
-  year?: string;
-  /* amount */
-  delinquent_tax_amount?: string;
-  total_due?: string;
-  amount_due?: string;
-  tax_amount?: string;
-  /* address */
-  property_address?: string;
-  address?: string;
-  mailing_address?: string;
-  /* city */
-  city?: string;
-  municipality?: string;
-  /* state / zip */
-  state?: string;
-  zip?: string;
-  zip_code?: string;
-  /* owner */
-  owner_name?: string;
-  taxpayer_name?: string;
-  assessee_name?: string;
-  /* additional fields */
-  volume?: string;
   classification?: string;
-  interest?: string;
-  status?: string;
-  [key: string]: string | undefined;
-}
-
-/** Return the first non-empty value found among the candidate keys. */
-function getField(row: SocrataRecord, ...candidates: string[]): string | undefined {
-  for (const key of candidates) {
-    const val = row[key];
-    if (val !== undefined && val !== null && val !== '') {
-      return String(val);
-    }
-  }
-  return undefined;
+  township_name?: string;
+  sold_at_sale?: boolean | string;
+  tax_amount_offered?: string;
+  penalty_amount_offered?: string;
+  total_tax_and_penalty_amount_offered?: string;
+  cost?: string;
+  total_amount_forfeited?: string;
+  location_1?: { latitude?: string; longitude?: string } | string;
+  [key: string]: unknown;
 }
 
 export class CookAdapter extends BaseAdapter {
@@ -82,38 +50,39 @@ export class CookAdapter extends BaseAdapter {
         }
 
         for (const row of batch) {
-          const pin = getField(row, 'pin', 'pin_number', 'property_index_number') ?? '';
+          const pin = row.pin ?? '';
           if (!pin) continue;
 
-          const addressParts: string[] = [];
-          const streetAddr = getField(row, 'property_address', 'address', 'mailing_address');
-          const cityName   = getField(row, 'city', 'municipality');
-          if (streetAddr) addressParts.push(streetAddr);
-          if (cityName)   addressParts.push(cityName);
-          addressParts.push(getField(row, 'state') ?? 'IL');
-          const zipCode = getField(row, 'zip', 'zip_code');
-          if (zipCode) addressParts.push(zipCode);
-          const rawAddress = addressParts.length > 1
-            ? addressParts.join(' ')
-            : `PIN ${pin} Chicago IL`;
+          // Amount — use total_amount_forfeited (tax + penalty + cost)
+          const amountStr = row.total_amount_forfeited ?? row.total_tax_and_penalty_amount_offered ?? row.tax_amount_offered;
+          const amount = amountStr ? parseFloat(amountStr as string) : undefined;
 
-          const amountRaw = getField(row, 'delinquent_tax_amount', 'total_due', 'amount_due', 'tax_amount');
-          const totalDue  = amountRaw ? parseFloat(amountRaw) : undefined;
-          const taxYearRaw = getField(row, 'tax_year', 'year');
-          const taxYear    = taxYearRaw ? parseInt(taxYearRaw, 10) : undefined;
+          // Tax year and years delinquent
+          const taxSaleYear = row.tax_sale_year ? parseInt(row.tax_sale_year, 10) : undefined;
           const currentYear = new Date().getFullYear();
-          const yearsDelinquent = taxYear && taxYear > 0
-            ? currentYear - taxYear
-            : undefined;
+          const yearsDelinquent = taxSaleYear && taxSaleYear > 0 ? currentYear - taxSaleYear : undefined;
+
+          // Address — no street address in this dataset, use township
+          const township = row.township_name ?? 'CHICAGO';
+          const rawAddress = `PIN ${pin} ${township} IL`;
+
+          // Property type from classification code
+          let propertyType = 'residential';
+          const classCode = row.classification ?? '';
+          if ((classCode as string).startsWith('5') || (classCode as string).startsWith('3')) {
+            propertyType = 'commercial';
+          } else if ((classCode as string).startsWith('1')) {
+            propertyType = 'land';
+          }
 
           records.push({
             rawParcelId: pin,
             rawAddress,
-            ownerName: getField(row, 'owner_name', 'taxpayer_name', 'assessee_name'),
-            propertyType: 'residential',
+            ownerName: undefined,
+            propertyType,
             signalType: 'tax_lien',
-            amount: totalDue !== undefined && Number.isFinite(totalDue) ? totalDue : undefined,
-            dateFiled: taxYear ? `${taxYear}-01-01` : undefined,
+            amount: Number.isFinite(amount) ? amount : undefined,
+            dateFiled: taxSaleYear ? `${taxSaleYear}-01-01` : undefined,
             yearsDelinquent,
             source: 'Cook County Treasurer - Annual Tax Sale',
           });
