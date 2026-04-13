@@ -60,7 +60,7 @@ export class CookAdapter extends BaseAdapter {
           const taxYear  = row['tax_year']  ? parseInt(row['tax_year'], 10) : undefined;
           const currentYear = new Date().getFullYear();
           const yearsDelinquent = taxYear && taxYear > 0
-            ? Math.max(1, currentYear - taxYear)
+            ? currentYear - taxYear
             : undefined;
 
           records.push({

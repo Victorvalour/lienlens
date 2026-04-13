@@ -154,7 +154,9 @@ function generateMaricopaRecords(): ScrapedRecord[] {
 
     const source: string = signalType === 'tax_lien'
       ? 'Maricopa County Treasurer'
-      : 'Maricopa County Recorder';
+      : signalType === 'lis_pendens'
+        ? 'Maricopa County Superior Court'
+        : 'Maricopa County Recorder';
 
     if (signalType === 'tax_lien') {
       amount = Math.round(seededRand(s + 13) * 79000 + 1000);
