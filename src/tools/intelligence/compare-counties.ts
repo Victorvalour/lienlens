@@ -51,6 +51,23 @@ const COUNTY_NAMES: Record<string, string> = {
   '48201': 'Harris County, TX',
   '17031': 'Cook County, IL',
   '04013': 'Maricopa County, AZ',
+  '42101': 'Philadelphia County, PA',
+  '26163': 'Wayne County, MI',
+  '06037': 'Los Angeles County, CA',
+  '12086': 'Miami-Dade County, FL',
+  '48113': 'Dallas County, TX',
+  '53033': 'King County, WA',
+  '32003': 'Clark County, NV',
+  '12011': 'Broward County, FL',
+  '48439': 'Tarrant County, TX',
+  '48029': 'Bexar County, TX',
+  '36059': 'Nassau County, NY',
+  '37119': 'Mecklenburg County, NC',
+  '39049': 'Franklin County, OH',
+  '27053': 'Hennepin County, MN',
+  '06073': 'San Diego County, CA',
+  '06065': 'Riverside County, CA',
+  '36103': 'Suffolk County, NY',
 };
 
 export async function compareCountiesHandler(args: CompareCountiesArgs): Promise<CallToolResult> {

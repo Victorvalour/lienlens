@@ -86,7 +86,24 @@ CREATE TABLE IF NOT EXISTS ingestion_logs (
 -- Seed supported counties
 INSERT INTO counties (fips, name, state, adapter_name, has_tax_data, has_preforeclosure_data, has_code_violation_data, update_frequency, status)
 VALUES
-  ('48201', 'Harris County', 'TX', 'HarrisAdapter', TRUE, TRUE, FALSE, 'daily', 'active'),
-  ('17031', 'Cook County',   'IL', 'CookAdapter',   TRUE, TRUE, FALSE, 'daily', 'active'),
-  ('04013', 'Maricopa County', 'AZ', 'MaricopaAdapter', TRUE, TRUE, FALSE, 'daily', 'active')
+  ('48201', 'Harris County',       'TX', 'HarrisAdapter',       TRUE, TRUE, FALSE, 'daily', 'active'),
+  ('17031', 'Cook County',         'IL', 'CookAdapter',         TRUE, TRUE, FALSE, 'daily', 'active'),
+  ('04013', 'Maricopa County',     'AZ', 'MaricopaAdapter',     TRUE, TRUE, FALSE, 'daily', 'active'),
+  ('42101', 'Philadelphia County', 'PA', 'PhiladelphiaAdapter', TRUE, FALSE, FALSE, 'daily', 'active'),
+  ('26163', 'Wayne County',        'MI', 'WayneAdapter',        TRUE, TRUE, FALSE, 'daily', 'active'),
+  ('06037', 'Los Angeles County',  'CA', 'LosAngelesAdapter',   TRUE, TRUE, FALSE, 'daily', 'active'),
+  ('12086', 'Miami-Dade County',   'FL', 'MiamiDadeAdapter',    TRUE, TRUE, FALSE, 'daily', 'active'),
+  ('48113', 'Dallas County',       'TX', 'DallasAdapter',       TRUE, TRUE, FALSE, 'daily', 'active'),
+  ('53033', 'King County',         'WA', 'KingAdapter',         TRUE, TRUE, FALSE, 'daily', 'active'),
+  ('32003', 'Clark County',        'NV', 'ClarkAdapter',        TRUE, TRUE, FALSE, 'daily', 'active'),
+  ('12011', 'Broward County',      'FL', 'BrowardAdapter',      TRUE, TRUE, FALSE, 'daily', 'active'),
+  ('48439', 'Tarrant County',      'TX', 'TarrantAdapter',      TRUE, TRUE, FALSE, 'daily', 'active'),
+  ('48029', 'Bexar County',        'TX', 'BexarAdapter',        TRUE, TRUE, FALSE, 'daily', 'active'),
+  ('36059', 'Nassau County',       'NY', 'NassauAdapter',       TRUE, TRUE, FALSE, 'daily', 'active'),
+  ('37119', 'Mecklenburg County',  'NC', 'MecklenburgAdapter',  TRUE, TRUE, FALSE, 'daily', 'active'),
+  ('39049', 'Franklin County',     'OH', 'FranklinAdapter',     TRUE, TRUE, FALSE, 'daily', 'active'),
+  ('27053', 'Hennepin County',     'MN', 'HennepinAdapter',     TRUE, TRUE, FALSE, 'daily', 'active'),
+  ('06073', 'San Diego County',    'CA', 'SanDiegoAdapter',     TRUE, TRUE, FALSE, 'daily', 'active'),
+  ('06065', 'Riverside County',    'CA', 'RiversideAdapter',    TRUE, TRUE, FALSE, 'daily', 'active'),
+  ('36103', 'Suffolk County',      'NY', 'SuffolkAdapter',      TRUE, TRUE, FALSE, 'daily', 'active')
 ON CONFLICT (fips) DO NOTHING;
