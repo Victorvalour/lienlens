@@ -66,8 +66,6 @@ export class NYCAdapter extends BaseAdapter {
           const amount = amountStr ? parseFloat(amountStr) : undefined;
 
           const taxClass = getField(row, 'tax_class');
-          const block = getField(row, 'block');
-          const lot = getField(row, 'lot');
           const owner = getField(row, 'owner_name', 'owner', 'taxpayer_name');
 
           records.push({
@@ -79,9 +77,6 @@ export class NYCAdapter extends BaseAdapter {
             source: 'NYC Department of Finance - Tax Lien Sale List',
             propertyType: taxClass?.startsWith('4') ? 'commercial' : 'residential',
           });
-
-          void block;
-          void lot;
         }
 
         if (batch.length < PAGE_SIZE) break;

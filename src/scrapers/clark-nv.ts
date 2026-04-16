@@ -27,7 +27,11 @@ export class ClarkAdapter extends BaseAdapter {
       const text = await response.text();
 
       // Only attempt CSV parsing if the response looks like tabular data
-      if (!contentType.includes('csv') && !text.includes(',')) {
+      const looksLikeCsv = contentType.includes('csv') ||
+        contentType.includes('text/plain') ||
+        (contentType.includes('octet-stream') && text.slice(0, 200).includes(','));
+
+      if (!looksLikeCsv) {
         console.warn(
           '[ClarkAdapter] Could not fetch delinquent tax data from Clark County Treasurer. County will show 0 records until data source is resolved.'
         );
