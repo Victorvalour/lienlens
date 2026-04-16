@@ -1,65 +1,60 @@
-// Seed data — King County does not currently offer a public bulk data API. Replace with real scraping when data access is obtained.
 import { BaseAdapter } from './base-adapter.js';
 import type { ScrapedRecord } from './base-adapter.js';
-import { generateSeedRecords } from './seed-generator.js';
-import type { SeedConfig } from './seed-generator.js';
 
-const CONFIG: SeedConfig = {
-  streets: [
-    'Pike St', 'Pine St', 'Broadway', 'Capitol Hill Ave', 'Rainier Ave S',
-    'MLK Jr Way S', 'Beacon Ave S', 'California Ave SW', 'Delridge Way SW', 'Roxbury St',
-    '35th Ave SW', 'Lake City Way NE', 'Aurora Ave N', '15th Ave NE', '23rd Ave',
-    'Madison St', 'Cherry St', 'Jackson St', 'Yesler Way', 'S Jackson St',
-    '1st Ave', '2nd Ave', '3rd Ave', '4th Ave', '5th Ave',
-    'Boren Ave', 'Eastlake Ave E', 'Westlake Ave N', 'Stone Way N', 'Phinney Ave N',
-    'Meridian Ave N', 'Greenwood Ave N', 'Holman Rd NW', 'NW Market St', 'NW 85th St',
-    '15th Ave NW', 'Leary Way NW', '8th Ave NW', 'Fremont Ave N', '36th Ave NE',
-  ],
-  cities: [
-    'Seattle', 'Seattle', 'Seattle', 'Seattle', 'Seattle',
-    'Bellevue', 'Kent', 'Renton', 'Federal Way', 'Auburn',
-    'Kirkland', 'Redmond', 'Burien', 'Tukwila', 'SeaTac',
-  ],
-  state: 'WA',
-  zipCodes: [
-    '98001', '98002', '98003', '98004', '98005', '98006', '98007', '98008', '98010', '98011',
-    '98012', '98014', '98019', '98022', '98023', '98024', '98027', '98028', '98029', '98030',
-    '98031', '98032', '98033', '98034', '98038', '98039', '98040', '98042', '98045', '98047',
-    '98050', '98051', '98053', '98055', '98056', '98057', '98058', '98059', '98065', '98068',
-    '98072', '98074', '98075', '98077', '98092', '98101', '98102', '98103', '98104', '98105',
-    '98106', '98107', '98108', '98109', '98110', '98112', '98115', '98116', '98117', '98118',
-    '98119', '98121', '98122', '98125', '98126', '98133', '98134', '98136', '98144', '98146',
-    '98148', '98155', '98158', '98164', '98166', '98168', '98177', '98178', '98188', '98199',
-  ],
-  parcelPrefix: '',
-  parcelLength: 10,
-  countyTaxSource: 'King County Treasury Operations',
-  countyClerkSource: 'King County Superior Court Clerk',
-  countyRecorderSource: 'King County Recorder\'s Office',
-  lenders: [
-    'Wells Fargo Bank NA', 'JPMorgan Chase Bank NA', 'Bank of America NA',
-    'Nationstar Mortgage', 'Rocket Mortgage', 'Freedom Mortgage', 'PennyMac Loan Services',
-    'LoanDepot', 'US Bank Home Mortgage', 'Citibank NA', 'United Wholesale Mortgage',
-    'NewRez LLC', 'Carrington Mortgage', 'HomeStreet Bank', 'Banner Bank',
-    'Washington Federal', 'Pacific Premier Bank', 'Columbia Bank', 'Riverview Community Bank',
-  ],
-  ownerFirstNames: [
-    'James', 'Robert', 'Maria', 'Patricia', 'Michael', 'Linda', 'William', 'Barbara',
-    'David', 'Susan', 'Richard', 'Jessica', 'Joseph', 'Karen', 'Thomas', 'Nancy',
-    'Wei', 'Ying', 'Ming', 'Hui', 'Fang', 'Jian', 'Xiao', 'Li',
-    'Rajesh', 'Priya', 'Amit', 'Sunita', 'Vijay', 'Lakshmi', 'Ramesh', 'Kavita',
-    'Thanh', 'Hien', 'Van', 'Minh', 'Lan', 'Tran', 'Nguyen', 'Le',
-    'Jose', 'Maria', 'Juan', 'Carmen', 'Carlos', 'Rosa', 'Miguel', 'Elena',
-  ],
-  ownerLastNames: [
-    'Johnson', 'Williams', 'Jones', 'Brown', 'Davis', 'Miller', 'Wilson', 'Moore',
-    'Taylor', 'Anderson', 'Thomas', 'Jackson', 'White', 'Harris', 'Martin', 'Garcia',
-    'Kim', 'Park', 'Choi', 'Chen', 'Wang', 'Zhang', 'Liu', 'Yang',
-    'Nguyen', 'Tran', 'Pham', 'Le', 'Vo', 'Vu', 'Dang', 'Bui',
-    'Patel', 'Shah', 'Kumar', 'Singh', 'Sharma', 'Gupta', 'Verma', 'Mehta',
-    'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Gonzalez', 'Perez', 'Torres', 'Sanchez',
-  ],
-};
+const DELINQUENT_URL = 'https://data.kingcounty.gov/resource/dsv3-ct3e.json';
+const FORECLOSURE_URL = 'https://data.kingcounty.gov/resource/nx4x-daw6.json';
+const PAGE_SIZE = 1000;
+
+function getField(record: Record<string, unknown>, ...candidates: string[]): string | undefined {
+  for (const key of candidates) {
+    if (record[key] !== undefined && record[key] !== null && record[key] !== '') {
+      return String(record[key]);
+    }
+    const upper = key.toUpperCase();
+    if (record[upper] !== undefined && record[upper] !== null && record[upper] !== '') {
+      return String(record[upper]);
+    }
+    const lower = key.toLowerCase();
+    if (record[lower] !== undefined && record[lower] !== null && record[lower] !== '') {
+      return String(record[lower]);
+    }
+  }
+  return undefined;
+}
+
+async function fetchAllPages(
+  url: string,
+  adapterName: string
+): Promise<Record<string, unknown>[]> {
+  const all: Record<string, unknown>[] = [];
+  let offset = 0;
+
+  while (true) {
+    const pageUrl = `${url}?$limit=${PAGE_SIZE}&$offset=${offset}`;
+    const response = await fetch(pageUrl, {
+      headers: { 'Accept': 'application/json' },
+      signal: AbortSignal.timeout(30_000),
+    });
+
+    if (!response.ok) {
+      console.error(`[${adapterName}] API error: ${response.status} ${response.statusText}`);
+      break;
+    }
+
+    const batch = await response.json() as Record<string, unknown>[];
+    if (!Array.isArray(batch) || batch.length === 0) break;
+
+    if (offset === 0 && batch.length > 0) {
+      console.log(`[${adapterName}] Sample record keys:`, Object.keys(batch[0]!));
+    }
+
+    all.push(...batch);
+    if (batch.length < PAGE_SIZE) break;
+    offset += PAGE_SIZE;
+  }
+
+  return all;
+}
 
 export class KingAdapter extends BaseAdapter {
   countyFips = '53033';
@@ -67,6 +62,62 @@ export class KingAdapter extends BaseAdapter {
   state = 'WA';
 
   async scrape(): Promise<ScrapedRecord[]> {
-    return generateSeedRecords(CONFIG, 220);
+    const records: ScrapedRecord[] = [];
+
+    try {
+      // Dataset 1: Delinquent Taxes
+      const delinquentRows = await fetchAllPages(DELINQUENT_URL, 'KingAdapter/DelinquentTaxes');
+      for (const row of delinquentRows) {
+        const parcel = getField(row, 'parcel', 'parcel_number', 'pin');
+        if (!parcel) continue;
+
+        const amountStr = getField(row, 'distribution_amt', 'amount', 'tax_amount', 'total_due');
+        const amount = amountStr ? parseFloat(amountStr) : undefined;
+
+        const taxYear = getField(row, 'tax_yr', 'tax_year', 'year');
+        const currentYear = new Date().getFullYear();
+        const year = taxYear ? parseInt(taxYear, 10) : undefined;
+        const yearsDelinquent = year && Number.isFinite(year) ? currentYear - year : undefined;
+
+        const owner = getField(row, 'taxpayer_name', 'owner_name', 'owner');
+
+        records.push({
+          rawParcelId: parcel,
+          rawAddress: `Parcel ${parcel} King County WA`,
+          ownerName: owner,
+          signalType: 'tax_lien',
+          amount: amount !== undefined && Number.isFinite(amount) ? amount : undefined,
+          dateFiled: year ? `${year}-01-01` : undefined,
+          yearsDelinquent,
+          source: 'King County Treasury Operations',
+        });
+      }
+
+      // Dataset 2: Foreclosure Parcels
+      const foreclosureRows = await fetchAllPages(FORECLOSURE_URL, 'KingAdapter/ForeclosureParcels');
+      for (const row of foreclosureRows) {
+        const parcel = getField(row, 'parcel', 'parcel_number', 'pin', 'major', 'minor');
+        if (!parcel) continue;
+
+        const address = getField(row, 'address', 'property_address', 'situs_address');
+        const rawAddress = address ? `${address} King County WA` : `Parcel ${parcel} King County WA`;
+
+        const amountStr = getField(row, 'amount', 'total_due', 'amount_due');
+        const amount = amountStr ? parseFloat(amountStr) : undefined;
+
+        records.push({
+          rawParcelId: parcel,
+          rawAddress,
+          signalType: 'notice_of_default',
+          amount: amount !== undefined && Number.isFinite(amount) ? amount : undefined,
+          source: 'King County Treasury Operations',
+        });
+      }
+    } catch (err) {
+      console.error('[KingAdapter] Failed to fetch King County data:', err);
+    }
+
+    console.log(`[KingAdapter] Fetched ${records.length} records from King County APIs`);
+    return records;
   }
 }

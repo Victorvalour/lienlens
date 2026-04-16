@@ -1,5 +1,5 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { getDistressSignals } from '../../db/queries.js';
+import { getDistressSignals, getCounty } from '../../db/queries.js';
 import { cacheKey, getCached, setCached } from '../../cache/redis.js';
 
 export const getDistressSignalsDefinition = {
@@ -58,6 +58,19 @@ interface GetDistressSignalsArgs {
   pageSize?: number;
 }
 
+const UNSUPPORTED_COUNTY_ERROR = (fips: string) => JSON.stringify({
+  error: `County FIPS "${fips}" is not currently supported. LienLens currently covers: Cook County IL (17031), Philadelphia PA (42101), New York City NY (36061), King County WA (53033), Franklin County OH (39049), Clark County NV (32003), Miami-Dade County FL (12086). More counties are being added as public data sources become available.`,
+  supportedCounties: [
+    { fips: '17031', name: 'Cook County', state: 'IL' },
+    { fips: '42101', name: 'Philadelphia County', state: 'PA' },
+    { fips: '36061', name: 'New York City', state: 'NY' },
+    { fips: '53033', name: 'King County', state: 'WA' },
+    { fips: '39049', name: 'Franklin County', state: 'OH' },
+    { fips: '32003', name: 'Clark County', state: 'NV' },
+    { fips: '12086', name: 'Miami-Dade County', state: 'FL' },
+  ],
+});
+
 export async function getDistressSignalsHandler(
   args: GetDistressSignalsArgs
 ): Promise<CallToolResult> {
@@ -71,6 +84,14 @@ export async function getDistressSignalsHandler(
       return {
         content: [{ type: 'text', text: JSON.stringify(cached) }],
         structuredContent: cached,
+      };
+    }
+
+    const county = await getCounty(args.countyFips);
+    if (!county) {
+      return {
+        content: [{ type: 'text', text: UNSUPPORTED_COUNTY_ERROR(args.countyFips) }],
+        isError: true,
       };
     }
 
