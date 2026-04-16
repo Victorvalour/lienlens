@@ -1,8 +1,12 @@
 import { BaseAdapter } from './base-adapter.js';
 import type { ScrapedRecord } from './base-adapter.js';
 
-const ARCGIS_URL =
-  'https://services.arcgis.com/8Pc9XBTAsYuxx9Ny/arcgis/rest/services/Tax_Delinquent_Properties/FeatureServer/0/query';
+const ARCGIS_ENDPOINTS = [
+  'https://gisws.miamidade.gov/arcgis/rest/services/MD_PropertySearch/FeatureServer/0/query',
+  'https://gis-mdc.opendata.arcgis.com/datasets/phl::tax-delinquent-properties',
+  'https://services.arcgis.com/8Pc9XBTAsYuxx9Ny/arcgis/rest/services/Tax_Delinquent/FeatureServer/0/query',
+  'https://gisws.miamidade.gov/arcgis/rest/services/LandManagement/Tax_Delinquent/FeatureServer/0/query',
+];
 const PAGE_SIZE = 1000;
 
 function getField(attrs: Record<string, unknown>, ...candidates: string[]): string | undefined {
@@ -22,6 +26,33 @@ function getField(attrs: Record<string, unknown>, ...candidates: string[]): stri
   return undefined;
 }
 
+async function findWorkingEndpoint(): Promise<string | null> {
+  for (const url of ARCGIS_ENDPOINTS) {
+    try {
+      const params = new URLSearchParams({
+        where: '1=1',
+        outFields: '*',
+        f: 'json',
+        resultOffset: '0',
+        resultRecordCount: '1',
+      });
+      const response = await fetch(`${url}?${params}`, {
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (!response.ok) continue;
+      const data = await response.json() as { features?: unknown[]; error?: unknown };
+      if (data.error) continue;
+      if (Array.isArray(data.features) && data.features.length > 0) {
+        console.log(`[MiamiDadeAdapter] Using endpoint: ${url}`);
+        return url;
+      }
+    } catch {
+      // try next
+    }
+  }
+  return null;
+}
+
 export class MiamiDadeAdapter extends BaseAdapter {
   countyFips = '12086';
   countyName = 'Miami-Dade County';
@@ -29,6 +60,13 @@ export class MiamiDadeAdapter extends BaseAdapter {
 
   async scrape(): Promise<ScrapedRecord[]> {
     const records: ScrapedRecord[] = [];
+
+    const workingUrl = await findWorkingEndpoint();
+    if (!workingUrl) {
+      console.warn('[MiamiDadeAdapter] All ArcGIS endpoints failed. County will show 0 records.');
+      return records;
+    }
+
     let offset = 0;
 
     try {
@@ -41,7 +79,7 @@ export class MiamiDadeAdapter extends BaseAdapter {
           resultRecordCount: String(PAGE_SIZE),
         });
 
-        const response = await fetch(`${ARCGIS_URL}?${params}`, {
+        const response = await fetch(`${workingUrl}?${params}`, {
           signal: AbortSignal.timeout(30_000),
         });
 
@@ -61,22 +99,22 @@ export class MiamiDadeAdapter extends BaseAdapter {
         for (const feature of data.features) {
           const attrs = feature.attributes;
 
-          const folio = getField(attrs, 'FOLIO', 'folio', 'FOLIO_NUMBER', 'PARCEL', 'parcel_id');
+          const folio = getField(attrs, 'FOLIO', 'FOLIO_NUMBER', 'PARCEL_ID', 'PARCEL', 'PIN', 'folio', 'parcel_id');
           if (!folio) continue;
 
-          const address = getField(attrs, 'PROPERTY_ADDRESS', 'ADDRESS', 'SITE_ADDRESS', 'SITUS_ADDRESS');
+          const address = getField(attrs, 'PROPERTY_ADDRESS', 'SITE_ADDRESS', 'SITUS_ADDRESS', 'ADDRESS');
           const city = getField(attrs, 'CITY', 'MUNICIPALITY');
           const zip = getField(attrs, 'ZIP_CODE', 'ZIP');
           const rawAddress = address
             ? `${address} ${city ?? 'Miami'} FL${zip ? ` ${zip}` : ''}`.trim()
             : `Folio ${folio} Miami FL`;
 
-          const owner = getField(attrs, 'OWNER_NAME', 'OWNER', 'OWNER1');
+          const owner = getField(attrs, 'OWNER_NAME', 'OWNER', 'OWNER1', 'NAME');
 
-          const amountStr = getField(attrs, 'TOTAL_DUE', 'AMOUNT_DUE', 'TAX_AMOUNT', 'DELINQUENT_AMOUNT');
+          const amountStr = getField(attrs, 'TOTAL_DUE', 'AMOUNT_DUE', 'TAX_AMOUNT', 'DELINQUENT_AMOUNT', 'BALANCE');
           const amount = amountStr ? parseFloat(amountStr) : undefined;
 
-          const yearStr = getField(attrs, 'TAX_YEAR', 'YEAR');
+          const yearStr = getField(attrs, 'TAX_YEAR', 'YEAR', 'BILL_YEAR');
           const year = yearStr ? parseInt(yearStr, 10) : undefined;
           const currentYear = new Date().getFullYear();
           const yearsDelinquent = year && Number.isFinite(year) ? currentYear - year : undefined;

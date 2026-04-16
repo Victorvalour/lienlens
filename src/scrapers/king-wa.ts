@@ -22,6 +22,21 @@ function getField(record: Record<string, unknown>, ...candidates: string[]): str
   return undefined;
 }
 
+async function fetchWithRetry(url: string, adapterName: string): Promise<Response> {
+  let response = await fetch(url, {
+    headers: { 'Accept': 'application/json' },
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (response.status === 500) {
+    console.warn(`[${adapterName}] Got 500, retrying once...`);
+    response = await fetch(url, {
+      headers: { 'Accept': 'application/json' },
+      signal: AbortSignal.timeout(30_000),
+    });
+  }
+  return response;
+}
+
 async function fetchAllPages(
   url: string,
   adapterName: string
@@ -31,18 +46,33 @@ async function fetchAllPages(
 
   while (true) {
     const pageUrl = `${url}?$limit=${PAGE_SIZE}&$offset=${offset}`;
-    const response = await fetch(pageUrl, {
-      headers: { 'Accept': 'application/json' },
-      signal: AbortSignal.timeout(30_000),
-    });
+    let response: Response;
+    try {
+      response = await fetchWithRetry(pageUrl, adapterName);
+    } catch (err) {
+      console.error(`[${adapterName}] Fetch error:`, err);
+      break;
+    }
 
     if (!response.ok) {
       console.error(`[${adapterName}] API error: ${response.status} ${response.statusText}`);
       break;
     }
 
-    const batch = await response.json() as Record<string, unknown>[];
-    if (!Array.isArray(batch) || batch.length === 0) break;
+    const raw = await response.json() as unknown;
+
+    // Handle nested response: { parcels: [...] } or flat array
+    let batch: Record<string, unknown>[];
+    if (Array.isArray(raw)) {
+      batch = raw as Record<string, unknown>[];
+    } else if (raw && typeof raw === 'object' && 'parcels' in (raw as object)) {
+      const nested = (raw as { parcels: unknown }).parcels;
+      batch = Array.isArray(nested) ? nested as Record<string, unknown>[] : [];
+    } else {
+      batch = [];
+    }
+
+    if (batch.length === 0) break;
 
     if (offset === 0 && batch.length > 0) {
       console.log(`[${adapterName}] Sample record keys:`, Object.keys(batch[0]!));
@@ -68,28 +98,37 @@ export class KingAdapter extends BaseAdapter {
       // Dataset 1: Delinquent Taxes
       const delinquentRows = await fetchAllPages(DELINQUENT_URL, 'KingAdapter/DelinquentTaxes');
       for (const row of delinquentRows) {
-        const parcel = getField(row, 'parcel', 'parcel_number', 'pin');
+        const parcel = getField(row, 'account_number');
         if (!parcel) continue;
 
-        const amountStr = getField(row, 'distribution_amt', 'amount', 'tax_amount', 'total_due');
-        const amount = amountStr ? parseFloat(amountStr) : undefined;
+        const taxStatus = getField(row, 'tax_status');
+        if (taxStatus && (taxStatus === 'Paid' || taxStatus === 'Current')) continue;
 
-        const taxYear = getField(row, 'tax_yr', 'tax_year', 'year');
+        const billedStr = getField(row, 'billed_amount');
+        const paidStr = getField(row, 'paid_amount');
+        let amount: number | undefined;
+        if (billedStr) {
+          const billed = parseFloat(billedStr);
+          if (Number.isFinite(billed)) {
+            const paid = paidStr ? parseFloat(paidStr) : 0;
+            amount = billed - (Number.isFinite(paid) ? paid : 0);
+          }
+        }
+
+        const taxYear = getField(row, 'bill_year');
         const currentYear = new Date().getFullYear();
         const year = taxYear ? parseInt(taxYear, 10) : undefined;
         const yearsDelinquent = year && Number.isFinite(year) ? currentYear - year : undefined;
 
-        const owner = getField(row, 'taxpayer_name', 'owner_name', 'owner');
-
         records.push({
           rawParcelId: parcel,
-          rawAddress: `Parcel ${parcel} King County WA`,
-          ownerName: owner,
+          rawAddress: `Account ${parcel} King County WA`,
+          ownerName: undefined,
           signalType: 'tax_lien',
           amount: amount !== undefined && Number.isFinite(amount) ? amount : undefined,
           dateFiled: year ? `${year}-01-01` : undefined,
           yearsDelinquent,
-          source: 'King County Treasury Operations',
+          source: 'King County Treasury - Delinquent Taxes',
         });
       }
 
@@ -110,7 +149,7 @@ export class KingAdapter extends BaseAdapter {
           rawAddress,
           signalType: 'notice_of_default',
           amount: amount !== undefined && Number.isFinite(amount) ? amount : undefined,
-          source: 'King County Treasury Operations',
+          source: 'King County Treasury - Foreclosure Parcels',
         });
       }
     } catch (err) {
