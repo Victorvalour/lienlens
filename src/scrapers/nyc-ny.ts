@@ -4,6 +4,14 @@ import type { ScrapedRecord } from './base-adapter.js';
 const SOCRATA_URL = 'https://data.cityofnewyork.us/resource/9rz4-mjek.json';
 const PAGE_SIZE = 1000;
 
+const BOROUGH_NAMES: Record<string, string> = {
+  '1': 'Manhattan',
+  '2': 'Bronx',
+  '3': 'Brooklyn',
+  '4': 'Queens',
+  '5': 'Staten Island',
+};
+
 function getField(record: Record<string, unknown>, ...candidates: string[]): string | undefined {
   for (const key of candidates) {
     if (record[key] !== undefined && record[key] !== null && record[key] !== '') {
@@ -19,6 +27,14 @@ function getField(record: Record<string, unknown>, ...candidates: string[]): str
     }
   }
   return undefined;
+}
+
+function classifyBuildingClass(buildingClass: string | undefined): 'residential' | 'commercial' {
+  if (!buildingClass) return 'residential';
+  const first = buildingClass[0]?.toUpperCase() ?? '';
+  if ('ABCDRS'.includes(first)) return 'residential';
+  if ('EFGHIJKLO'.includes(first)) return 'commercial';
+  return 'residential';
 }
 
 export class NYCAdapter extends BaseAdapter {
@@ -52,30 +68,35 @@ export class NYCAdapter extends BaseAdapter {
         }
 
         for (const row of batch) {
-          const bbl = getField(row, 'bbl', 'borough_block_lot', 'parcel');
-          if (!bbl) continue;
+          const boroughNum = getField(row, 'borough') ?? '';
+          const blockRaw = getField(row, 'block') ?? '';
+          const lotRaw = getField(row, 'lot') ?? '';
 
-          const address = getField(row, 'property_address', 'address', 'street_address');
-          const borough = getField(row, 'borough');
-          const zip = getField(row, 'zip_code', 'zipcode', 'zip');
-          const rawAddress = address
-            ? `${address} ${borough ?? ''} NY ${zip ?? ''}`.trim()
-            : `BBL ${bbl} New York NY`;
+          if (!boroughNum || !blockRaw || !lotRaw) continue;
 
-          const amountStr = getField(row, 'tax_amount', 'amount', 'amount_due', 'ease_amount', 'total_due');
-          const amount = amountStr ? parseFloat(amountStr) : undefined;
+          const bbl = `${boroughNum}${blockRaw.padStart(5, '0')}${lotRaw.padStart(4, '0')}`;
 
-          const taxClass = getField(row, 'tax_class');
-          const owner = getField(row, 'owner_name', 'owner', 'taxpayer_name');
+          const houseNumber = getField(row, 'house_number') ?? '';
+          const streetName = getField(row, 'street_name') ?? '';
+          const zip = getField(row, 'zip_code', 'zipcode', 'zip') ?? '';
+          const boroughName = BOROUGH_NAMES[boroughNum] ?? 'New York';
+          const rawAddress = `${houseNumber} ${streetName} ${boroughName} NY ${zip}`.trim();
+
+          const buildingClass = getField(row, 'building_class');
+          const propertyType = classifyBuildingClass(buildingClass);
+
+          const monthRaw = getField(row, 'month');
+          const dateFiled = monthRaw ? monthRaw.slice(0, 10) : undefined;
 
           records.push({
             rawParcelId: bbl,
             rawAddress,
-            ownerName: owner,
+            ownerName: undefined,
             signalType: 'tax_lien',
-            amount: amount !== undefined && Number.isFinite(amount) ? amount : undefined,
+            amount: undefined,
+            dateFiled,
             source: 'NYC Department of Finance - Tax Lien Sale List',
-            propertyType: taxClass?.startsWith('4') ? 'commercial' : 'residential',
+            propertyType,
           });
         }
 
