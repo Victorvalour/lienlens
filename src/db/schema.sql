@@ -59,7 +59,12 @@ CREATE TABLE IF NOT EXISTS distress_signals (
 CREATE INDEX IF NOT EXISTS idx_signals_property ON distress_signals(property_id);
 CREATE INDEX IF NOT EXISTS idx_signals_type ON distress_signals(signal_type);
 CREATE INDEX IF NOT EXISTS idx_signals_date_filed ON distress_signals(date_filed);
-CREATE INDEX IF NOT EXISTS idx_signals_amount ON distress_signals(amount);
+
+CREATE INDEX IF NOT EXISTS idx_properties_county_fips ON properties (county_fips);
+CREATE INDEX IF NOT EXISTS idx_distress_signals_property_id ON distress_signals (property_id);
+CREATE INDEX IF NOT EXISTS idx_distress_signals_signal_type ON distress_signals (signal_type);
+CREATE INDEX IF NOT EXISTS idx_distress_signals_property_signal ON distress_signals (property_id, signal_type);
+CREATE INDEX IF NOT EXISTS idx_distress_signals_amount ON distress_signals (amount DESC NULLS LAST);
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_distress_signals_dedupe
 ON distress_signals (
@@ -86,11 +91,8 @@ CREATE TABLE IF NOT EXISTS ingestion_logs (
 -- Seed supported counties
 INSERT INTO counties (fips, name, state, adapter_name, has_tax_data, has_preforeclosure_data, has_code_violation_data, update_frequency, status)
 VALUES
-  ('17031', 'Cook County',           'IL', 'CookAdapter',         TRUE, TRUE,  FALSE, 'daily', 'active'),
-  ('42101', 'Philadelphia County',   'PA', 'PhiladelphiaAdapter', TRUE, FALSE, FALSE, 'daily', 'active'),
-  ('36061', 'New York City',         'NY', 'NYCAdapter',          TRUE, FALSE, FALSE, 'daily', 'active'),
-  ('53033', 'King County',           'WA', 'KingAdapter',         TRUE, TRUE,  FALSE, 'daily', 'active'),
-  ('39049', 'Franklin County',       'OH', 'FranklinAdapter',     TRUE, FALSE, FALSE, 'daily', 'active'),
-  ('32003', 'Clark County',          'NV', 'ClarkAdapter',        TRUE, FALSE, FALSE, 'daily', 'active'),
-  ('12086', 'Miami-Dade County',     'FL', 'MiamiDadeAdapter',    TRUE, FALSE, FALSE, 'daily', 'active')
+  ('17031', 'Cook County',         'IL', 'CookAdapter',         TRUE, TRUE,  FALSE, 'daily', 'active'),
+  ('42101', 'Philadelphia County', 'PA', 'PhiladelphiaAdapter', TRUE, FALSE, FALSE, 'daily', 'active'),
+  ('36061', 'New York City',       'NY', 'NYCAdapter',          TRUE, FALSE, FALSE, 'daily', 'active'),
+  ('39049', 'Franklin County',     'OH', 'FranklinAdapter',     TRUE, FALSE, FALSE, 'daily', 'active')
 ON CONFLICT (fips) DO NOTHING;

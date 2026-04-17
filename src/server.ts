@@ -11,6 +11,7 @@ import {
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import dotenv from 'dotenv';
 import { startIngestionJobs } from './jobs/ingest.js';
+import { flushCache } from './cache/redis.js';
 
 import {
   analyzeDistressDefinition,
@@ -169,7 +170,9 @@ app.get('/health', (_req, res) => {
 });
 
 const PORT = parseInt(process.env.PORT ?? '3000', 10);
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`[LienLens] Server running on port ${PORT}`);
+  await flushCache();
+  console.log('[LienLens] Redis cache cleared on startup');
   startIngestionJobs();
 });
