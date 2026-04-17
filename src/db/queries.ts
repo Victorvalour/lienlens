@@ -247,7 +247,8 @@ export async function getDistressSignals(
     }));
 
     return { signals, totalCount };
-  } catch {
+  } catch (err) {
+    console.error('[getDistressSignals] Query error:', err);
     return { signals: [], totalCount: 0 };
   }
 }
@@ -326,7 +327,8 @@ export async function getTaxDelinquencies(
     }));
 
     return { delinquencies, totalCount };
-  } catch {
+  } catch (err) {
+    console.error('[getTaxDelinquencies] Query error:', err);
     return { delinquencies: [], totalCount: 0 };
   }
 }
@@ -410,7 +412,8 @@ export async function getPreforeclosures(
     }));
 
     return { filings, totalCount };
-  } catch {
+  } catch (err) {
+    console.error('[getPreforeclosures] Query error:', err);
     return { filings: [], totalCount: 0 };
   }
 }
@@ -468,7 +471,8 @@ export async function getPropertiesWithSignals(
       propertyType: r['property_type'] as string,
       signals: (r['signals'] as DistressSignal[]) ?? [],
     }));
-  } catch {
+  } catch (err) {
+    console.error('[getPropertiesWithSignals] Query error:', err);
     return [];
   }
 }

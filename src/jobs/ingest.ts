@@ -2,10 +2,7 @@ import cron from 'node-cron';
 import { CookAdapter } from '../scrapers/cook-il.js';
 import { PhiladelphiaAdapter } from '../scrapers/philadelphia-pa.js';
 import { NYCAdapter } from '../scrapers/nyc-ny.js';
-import { KingAdapter } from '../scrapers/king-wa.js';
 import { FranklinAdapter } from '../scrapers/franklin-oh.js';
-import { ClarkAdapter } from '../scrapers/clark-nv.js';
-import { MiamiDadeAdapter } from '../scrapers/miami-dade-fl.js';
 import { normalizeAddress } from '../normalize/address.js';
 import { canonicalizeParcelId } from '../normalize/parcel-id.js';
 import { mapToSignalType } from '../normalize/distress-taxonomy.js';
@@ -15,10 +12,26 @@ import {
   updateCountyIngestion,
   logIngestionStart,
   logIngestionEnd,
+  getCounty,
 } from '../db/queries.js';
 import type { BaseAdapter } from '../scrapers/base-adapter.js';
 
-async function runAdapter(adapter: BaseAdapter): Promise<void> {
+async function runAdapter(adapter: BaseAdapter): Promise<{ ingested: number; failed: number }> {
+  // Skip if recently ingested (within 12 hours)
+  try {
+    const county = await getCounty(adapter.countyFips);
+    if (county?.lastIngestedAt) {
+      const lastIngested = new Date(county.lastIngestedAt).getTime();
+      const twelveHoursAgo = Date.now() - (12 * 60 * 60 * 1000);
+      if (lastIngested > twelveHoursAgo) {
+        console.log(`[Ingest] ${county.name}: skipping, last ingested ${county.lastIngestedAt}`);
+        return { ingested: 0, failed: 0 };
+      }
+    }
+  } catch {
+    // Continue with ingestion if check fails
+  }
+
   const logId = await logIngestionStart(adapter.countyFips, adapter.constructor.name);
   let recordsFound = 0;
   let recordsNew = 0;
@@ -85,6 +98,8 @@ async function runAdapter(adapter: BaseAdapter): Promise<void> {
       errorMessage: message,
     });
   }
+
+  return { ingested: recordsNew, failed: recordsFailed };
 }
 
 export function startIngestionJobs(): void {
@@ -95,10 +110,7 @@ export function startIngestionJobs(): void {
       new CookAdapter(),
       new PhiladelphiaAdapter(),
       new NYCAdapter(),
-      new KingAdapter(),
       new FranklinAdapter(),
-      new ClarkAdapter(),
-      new MiamiDadeAdapter(),
     ];
     for (const adapter of adapters) {
       await runAdapter(adapter);
@@ -112,10 +124,7 @@ export function startIngestionJobs(): void {
       new CookAdapter(),
       new PhiladelphiaAdapter(),
       new NYCAdapter(),
-      new KingAdapter(),
       new FranklinAdapter(),
-      new ClarkAdapter(),
-      new MiamiDadeAdapter(),
     ];
     for (const adapter of adapters) {
       await runAdapter(adapter);

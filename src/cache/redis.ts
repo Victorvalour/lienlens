@@ -56,3 +56,13 @@ export async function invalidatePattern(pattern: string): Promise<void> {
     // ignore
   }
 }
+
+export async function flushCache(): Promise<void> {
+  try {
+    const r = getRedis();
+    if (!r) return;
+    await r.flushdb();
+  } catch {
+    console.warn('[Cache] Could not flush Redis cache');
+  }
+}
