@@ -73,6 +73,7 @@ export async function getTaxDelinquenciesHandler(
   args: GetTaxDelinquenciesArgs
 ): Promise<CallToolResult> {
   try {
+    console.log('[get_tax_delinquencies] CALLED with args:', JSON.stringify(args));
     const pageSize = Math.min(args.pageSize ?? 50, 200);
     const page = args.page ?? 1;
 
