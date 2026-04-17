@@ -192,12 +192,12 @@ export async function getDistressSignals(
       conditions.push(`ds.signal_type = $${idx++}`);
       params.push(filters.signalType);
     }
-    if (filters.minAmount !== undefined) {
+ if (filters.minAmount !== undefined && filters.minAmount > 0) {
       conditions.push(`ds.amount >= $${idx++}`);
       params.push(filters.minAmount);
     }
     if (filters.maxAmount !== undefined) {
-      conditions.push(`ds.amount <= $${idx++}`);
+      conditions.push(`(ds.amount IS NULL OR ds.amount <= $${idx++})`);
       params.push(filters.maxAmount);
     }
     if (filters.filedAfter) {
@@ -270,15 +270,15 @@ export async function getTaxDelinquencies(
     const params: unknown[] = [countyFips];
     let idx = 2;
 
-    if (filters.minAmount !== undefined) {
+       if (filters.minAmount !== undefined && filters.minAmount > 0) {
       conditions.push(`ds.amount >= $${idx++}`);
       params.push(filters.minAmount);
     }
     if (filters.maxAmount !== undefined) {
-      conditions.push(`ds.amount <= $${idx++}`);
+      conditions.push(`(ds.amount IS NULL OR ds.amount <= $${idx++})`);
       params.push(filters.maxAmount);
     }
-    if (filters.minYearsDelinquent !== undefined) {
+    if (filters.minYearsDelinquent !== undefined && filters.minYearsDelinquent > 0) {
       conditions.push(`ds.years_delinquent >= $${idx++}`);
       params.push(filters.minYearsDelinquent);
     }
@@ -286,9 +286,9 @@ export async function getTaxDelinquencies(
       conditions.push(`p.property_type = $${idx++}`);
       params.push(filters.propertyType);
     }
-    if (filters.taxSaleScheduled !== undefined) {
+    if (filters.taxSaleScheduled === true) {
       conditions.push(`ds.tax_sale_scheduled = $${idx++}`);
-      params.push(filters.taxSaleScheduled);
+      params.push(true);
     }
 
     const where = conditions.join(' AND ');
