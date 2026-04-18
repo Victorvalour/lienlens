@@ -5,18 +5,18 @@ import { cacheKey, getCached, setCached } from '../../cache/redis.js';
 export const getDistressSignalsDefinition = {
   name: 'get_distress_signals',
   description:
-    'Retrieve paginated distress signals (tax liens, lis pendens, NODs, NOTS, code violations) for a given county with optional filtering.',
+    'Retrieve paginated tax delinquency signals for a given county with optional filtering.',
   inputSchema: {
     type: 'object' as const,
     properties: {
       countyFips: {
         type: 'string',
-        description: 'Five-digit FIPS code for the county (e.g. "48201" for Harris County TX)',
+        description: 'Five-digit FIPS code for the county (e.g. "17031" for Cook County IL)',
       },
       signalType: {
         type: 'string',
-        enum: ['tax_lien', 'lis_pendens', 'notice_of_default', 'notice_of_trustee_sale', 'code_violation'],
-        description: 'Filter by specific signal type',
+        enum: ['tax_lien'],
+        description: 'Filter by signal type (currently only tax_lien is supported)',
       },
       minAmount: { type: 'number', description: 'Minimum dollar amount' },
       maxAmount: { type: 'number', description: 'Maximum dollar amount' },

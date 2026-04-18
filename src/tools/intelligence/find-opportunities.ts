@@ -7,7 +7,7 @@ import type { ActionabilityRating, SignalType } from '../../types/index.js';
 export const findOpportunitiesDefinition = {
   name: 'find_distress_opportunities',
   description:
-    'Find pre-foreclosure investment opportunities: properties with tax liens but no lis pendens or foreclosure filings — the sweet spot before legal proceedings start.',
+    'Find tax delinquency investment opportunities: properties with significant tax delinquency exposure — high amounts owed, multiple years delinquent — ranked by distress score.',
   inputSchema: {
     type: 'object' as const,
     properties: {
@@ -62,7 +62,6 @@ export interface FindOpportunitiesArgs {
   limit?: number;
 }
 
-const FORECLOSURE_TYPES = new Set(['lis_pendens', 'notice_of_default', 'notice_of_trustee_sale']);
 
 interface OpportunityRecord {
   parcelId: string;
@@ -123,9 +122,8 @@ export async function findOpportunitiesHandler(args: FindOpportunitiesArgs): Pro
     });
 
     const taxOnlyProperties = propertiesWithSignals.filter(p => {
-      const hasForeclosureSignal = p.signals.some(s => FORECLOSURE_TYPES.has(s.signalType as string));
       const maxYears = Math.max(...p.signals.map(s => s.yearsDelinquent ?? 0));
-      return !hasForeclosureSignal && maxYears >= minYears &&
+      return maxYears >= minYears &&
         (args.maxYearsDelinquent === undefined || maxYears <= args.maxYearsDelinquent);
     });
 

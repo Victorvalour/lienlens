@@ -91,7 +91,7 @@ CREATE TABLE IF NOT EXISTS ingestion_logs (
 -- Seed supported counties
 INSERT INTO counties (fips, name, state, adapter_name, has_tax_data, has_preforeclosure_data, has_code_violation_data, update_frequency, status)
 VALUES
-  ('17031', 'Cook County',         'IL', 'CookAdapter',         TRUE, TRUE,  FALSE, 'daily', 'active'),
+  ('17031', 'Cook County',         'IL', 'CookAdapter',         TRUE, FALSE, FALSE, 'daily', 'active'),
   ('42101', 'Philadelphia County', 'PA', 'PhiladelphiaAdapter', TRUE, FALSE, FALSE, 'daily', 'active'),
   ('36061', 'New York City',       'NY', 'NYCAdapter',          TRUE, FALSE, FALSE, 'daily', 'active'),
   ('39049', 'Franklin County',     'OH', 'FranklinAdapter',     TRUE, FALSE, FALSE, 'daily', 'active')

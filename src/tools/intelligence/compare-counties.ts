@@ -6,7 +6,7 @@ import type { TrendDirection } from '../../types/index.js';
 export const compareCountiesDefinition = {
   name: 'compare_county_distress',
   description:
-    'Compare distress signal activity across multiple counties — ranks them by signal volume, average amounts, and trend direction to identify the most distressed markets.',
+    'Compare tax delinquency activity across multiple counties — ranks them by delinquency volume, average amounts, and trend direction to identify the most distressed markets.',
   inputSchema: {
     type: 'object' as const,
     properties: {
@@ -17,8 +17,8 @@ export const compareCountiesDefinition = {
       },
       signalType: {
         type: 'string',
-        enum: ['tax_lien', 'lis_pendens', 'notice_of_default', 'notice_of_trustee_sale', 'code_violation', 'all'],
-        description: 'Signal type to compare (default: all)',
+        enum: ['tax_lien', 'all'],
+        description: 'Signal type to compare (default: all; only tax_lien data is available)',
       },
     },
     required: ['countyFips'],
