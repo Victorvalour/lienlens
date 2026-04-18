@@ -42,11 +42,6 @@ import {
 } from './tools/data/get-tax-delinquencies.js';
 
 import {
-  getPreforeclosuresDefinition,
-  getPreforeclosuresHandler,
-} from './tools/data/get-preforeclosures.js';
-
-import {
   listSupportedCountiesDefinition,
   listSupportedCountiesHandler,
 } from './tools/data/list-supported-counties.js';
@@ -72,7 +67,6 @@ function createMcpServer(): Server {
       findOpportunitiesDefinition,
       getDistressSignalsDefinition,
       getTaxDelinquenciesDefinition,
-      getPreforeclosuresDefinition,
       listSupportedCountiesDefinition,
     ],
   }));
@@ -96,9 +90,6 @@ function createMcpServer(): Server {
 
       case 'get_tax_delinquencies':
         return getTaxDelinquenciesHandler(safeArgs as unknown as { countyFips: string });
-
-      case 'get_preforeclosures':
-        return getPreforeclosuresHandler(safeArgs as unknown as { countyFips: string });
 
       case 'list_supported_counties':
         return listSupportedCountiesHandler(safeArgs as unknown as { state?: string });

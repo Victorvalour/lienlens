@@ -1,5 +1,6 @@
 export enum SignalTypeEnum {
   TAX_LIEN = 'tax_lien',
+  // The following types are retained for forward-compatibility but are not actively ingested.
   LIS_PENDENS = 'lis_pendens',
   NOTICE_OF_DEFAULT = 'notice_of_default',
   NOTICE_OF_TRUSTEE_SALE = 'notice_of_trustee_sale',

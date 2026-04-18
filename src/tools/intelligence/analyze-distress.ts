@@ -7,7 +7,7 @@ import type { DistressedProperty, ActionabilityRating, SignalType } from '../../
 export const analyzeDistressDefinition = {
   name: 'analyze_property_distress',
   description:
-    'Analyze and rank distressed properties in a county using a composite distress score that weighs signal severity, total amount owed, recency, and duration.',
+    'Analyze and rank tax-delinquent properties in a county using a composite distress score that weighs delinquency amount, years delinquent, recency, and tax-sale status.',
   inputSchema: {
     type: 'object' as const,
     properties: {
