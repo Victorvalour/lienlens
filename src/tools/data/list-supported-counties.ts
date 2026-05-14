@@ -18,7 +18,11 @@ export const listSupportedCountiesDefinition = {
   outputSchema: {
     type: 'object' as const,
     properties: {
-      counties: { type: 'array' },
+      counties: {
+        type: 'array',
+        description:
+          'Each county object includes amountFieldsAvailable: false when its upstream public source does not publish dollar amounts (NYC). Callers should rank such counties by signal count, not dollars.',
+      },
       totalCount: { type: 'number' },
       fetchedAt: { type: 'string' },
       dataSources: { type: 'array' },
@@ -52,9 +56,24 @@ export async function listSupportedCountiesHandler(
 
     const counties = await getCounties(args.state);
 
+    // FIPS codes whose upstream public source does not publish dollar amounts.
+    // Currently only NYC (Department of Finance tax-lien sale list).
+    const NO_AMOUNT_FIPS = new Set(['36061']);
+    const enrichedCounties = counties.map(c => ({
+      ...c,
+      amountFieldsAvailable: !NO_AMOUNT_FIPS.has(c.fips),
+      ...(NO_AMOUNT_FIPS.has(c.fips)
+        ? {
+            dataLimitations: [
+              'Lien presence and parcel metadata only. Dollar amount fields are not published by the upstream public source.',
+            ],
+          }
+        : {}),
+    }));
+
     const result = {
-      counties,
-      totalCount: counties.length,
+      counties: enrichedCounties,
+      totalCount: enrichedCounties.length,
       fetchedAt: new Date().toISOString(),
       dataSources: counties.map(c => c.adapterName).filter(Boolean),
       dataFreshness: 'daily' as const,

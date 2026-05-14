@@ -66,6 +66,15 @@ CREATE INDEX IF NOT EXISTS idx_distress_signals_signal_type ON distress_signals 
 CREATE INDEX IF NOT EXISTS idx_distress_signals_property_signal ON distress_signals (property_id, signal_type);
 CREATE INDEX IF NOT EXISTS idx_distress_signals_amount ON distress_signals (amount DESC NULLS LAST);
 
+-- Recommended composite index to keep filtered Cook County queries
+-- (e.g. signal_type='tax_lien' + amount >= 10000) fast. Apply via your
+-- migration tool of choice. CREATE INDEX IF NOT EXISTS is idempotent, but
+-- on a large table you may want CONCURRENTLY to avoid blocking writes:
+--   CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_distress_signals_type_amount
+--     ON distress_signals (signal_type, amount DESC NULLS LAST);
+CREATE INDEX IF NOT EXISTS idx_distress_signals_type_amount
+  ON distress_signals (signal_type, amount DESC NULLS LAST);
+
 CREATE UNIQUE INDEX IF NOT EXISTS uq_distress_signals_dedupe
 ON distress_signals (
   property_id,

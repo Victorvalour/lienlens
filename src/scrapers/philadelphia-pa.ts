@@ -84,7 +84,18 @@ export class PhiladelphiaAdapter extends BaseAdapter {
           const owner = getField(attrs, 'OWNER', 'owner', 'owner_name', 'taxpayer_name');
 
           const amountStr = getField(attrs, 'TOTAL_DUE', 'total_due', 'total', 'PRINCIPAL_DUE', 'principal_due', 'principal', 'amount_due');
-          const amount = amountStr ? parseFloat(amountStr) : undefined;
+          const parsed = amountStr ? parseFloat(amountStr) : undefined;
+          // Defensive: reject NaN, Infinity, and negatives. Log outliers above
+          // $5M so future spot-checks (e.g. commercial parcels) are visible.
+          const amount =
+            parsed !== undefined && Number.isFinite(parsed) && parsed >= 0
+              ? parsed
+              : undefined;
+          if (amount !== undefined && amount > 5_000_000) {
+            console.warn(
+              `[PhiladelphiaAdapter] Outlier amount $${amount.toFixed(2)} for parcel ${parcelId} (rawAmount="${amountStr}"). Verify upstream entry.`
+            );
+          }
 
           const numYearsOwed = getField(attrs, 'NUM_YEARS_OWED', 'num_years_owed');
           const yearStr = getField(attrs, 'OLDEST_YEAR_OWED', 'MOST_RECENT_YEAR_OWED', 'tax_period', 'tax_year', 'year_due', 'year');
@@ -114,7 +125,7 @@ export class PhiladelphiaAdapter extends BaseAdapter {
             ownerName: owner,
             propertyType,
             signalType: 'tax_lien',
-            amount: amount !== undefined && Number.isFinite(amount) ? amount : undefined,
+            amount,
             dateFiled,
             yearsDelinquent,
             source: 'Philadelphia Department of Revenue - Real Estate Tax Delinquencies',

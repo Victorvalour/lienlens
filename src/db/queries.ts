@@ -80,12 +80,20 @@ export interface DelinquencyRow {
   address: string;
   ownerName?: string;
   propertyType: string;
-  amount: number;
+  // Null when the upstream source (e.g. NYC tax-lien-sale list) does not
+  // expose a dollar amount. Callers must use (amount ?? 0) or skip the row
+  // for arithmetic and surface this through amountFieldsAvailable.
+  amount: number | null;
   yearsDelinquent?: number;
   taxSaleScheduled: boolean;
   taxSaleDate?: string;
   dateFiled?: string;
 }
+
+// Hard cap on the count subquery so a filtered query against a huge result
+// set cannot spin the DB. When the true row count exceeds this cap we
+// report totalCount = COUNT_CAP and totalCountCapped = true.
+const COUNT_CAP = 10_000;
 
 export interface PreforeclosureRow {
   parcelId: string;
@@ -178,7 +186,7 @@ export async function getCounty(fips: string): Promise<County | null> {
 export async function getDistressSignals(
   countyFips: string,
   filters: SignalFilters
-): Promise<{ signals: DistressSignalRow[]; totalCount: number }> {
+): Promise<{ signals: DistressSignalRow[]; totalCount: number; totalCountCapped: boolean }> {
   try {
     const page = filters.page ?? 1;
     const pageSize = filters.pageSize ?? 50;
@@ -210,10 +218,16 @@ export async function getDistressSignals(
     }
 
     const where = conditions.join(' AND ');
+    // Bounded count: stop scanning once we cross COUNT_CAP rows so a query
+    // against a huge filtered result set cannot blow the latency budget.
     const countSql = `
-      SELECT COUNT(*) FROM distress_signals ds
-      JOIN properties p ON p.id = ds.property_id
-      WHERE ${where}
+      SELECT COUNT(*)::int AS count FROM (
+        SELECT 1
+        FROM distress_signals ds
+        JOIN properties p ON p.id = ds.property_id
+        WHERE ${where}
+        LIMIT ${COUNT_CAP + 1}
+      ) sub
     `;
     const dataSql = `
       SELECT p.parcel_id, p.address_normalized AS address, p.owner_name,
@@ -231,7 +245,9 @@ export async function getDistressSignals(
       query(dataSql, [...params, pageSize, offset]),
     ]);
 
-    const totalCount = Number(countResult.rows[0]?.['count'] ?? 0);
+    const rawCount = Number(countResult.rows[0]?.['count'] ?? 0);
+    const totalCountCapped = rawCount > COUNT_CAP;
+    const totalCount = totalCountCapped ? COUNT_CAP : rawCount;
     const signals: DistressSignalRow[] = dataResult.rows.map(r => ({
       parcelId: r['parcel_id'] as string,
       address: (r['address'] ?? '') as string,
@@ -246,10 +262,10 @@ export async function getDistressSignals(
       yearsDelinquent: r['years_delinquent'] ? Number(r['years_delinquent']) : undefined,
     }));
 
-    return { signals, totalCount };
+    return { signals, totalCount, totalCountCapped };
   } catch (err) {
     console.error('[getDistressSignals] Query error:', err);
-    return { signals: [], totalCount: 0 };
+    return { signals: [], totalCount: 0, totalCountCapped: false };
   }
 }
 
@@ -260,7 +276,7 @@ export async function getDistressSignals(
 export async function getTaxDelinquencies(
   countyFips: string,
   filters: TaxFilters
-): Promise<{ delinquencies: DelinquencyRow[]; totalCount: number }> {
+): Promise<{ delinquencies: DelinquencyRow[]; totalCount: number; totalCountCapped: boolean }> {
   try {
     const page = filters.page ?? 1;
     const pageSize = filters.pageSize ?? 50;
@@ -293,9 +309,13 @@ export async function getTaxDelinquencies(
 
     const where = conditions.join(' AND ');
     const countSql = `
-      SELECT COUNT(*) FROM distress_signals ds
-      JOIN properties p ON p.id = ds.property_id
-      WHERE ${where}
+      SELECT COUNT(*)::int AS count FROM (
+        SELECT 1
+        FROM distress_signals ds
+        JOIN properties p ON p.id = ds.property_id
+        WHERE ${where}
+        LIMIT ${COUNT_CAP + 1}
+      ) sub
     `;
     const dataSql = `
       SELECT p.parcel_id, p.address_normalized AS address, p.owner_name,
@@ -313,23 +333,33 @@ export async function getTaxDelinquencies(
       query(dataSql, [...params, pageSize, offset]),
     ]);
 
-    const totalCount = Number(countResult.rows[0]?.['count'] ?? 0);
-    const delinquencies: DelinquencyRow[] = dataResult.rows.map(r => ({
-      parcelId: r['parcel_id'] as string,
-      address: (r['address'] ?? '') as string,
-      ownerName: r['owner_name'] as string | undefined,
-      propertyType: r['property_type'] as string,
-      amount: Number(r['amount'] ?? 0),
-      yearsDelinquent: r['years_delinquent'] ? Number(r['years_delinquent']) : undefined,
-      taxSaleScheduled: Boolean(r['tax_sale_scheduled']),
-      taxSaleDate: r['tax_sale_date'] as string | undefined,
-      dateFiled: r['date_filed'] as string | undefined,
-    }));
+    const rawCount = Number(countResult.rows[0]?.['count'] ?? 0);
+    const totalCountCapped = rawCount > COUNT_CAP;
+    const totalCount = totalCountCapped ? COUNT_CAP : rawCount;
+    const delinquencies: DelinquencyRow[] = dataResult.rows.map(r => {
+      const rawAmount = r['amount'];
+      // Preserve NULL from the upstream source instead of coercing to 0. NYC
+      // tax-lien rows have no amount; coercing to 0 was making
+      // totalAmountOutstanding meaningless. See get_tax_delinquencies handler.
+      const amount =
+        rawAmount === null || rawAmount === undefined ? null : Number(rawAmount);
+      return {
+        parcelId: r['parcel_id'] as string,
+        address: (r['address'] ?? '') as string,
+        ownerName: r['owner_name'] as string | undefined,
+        propertyType: r['property_type'] as string,
+        amount,
+        yearsDelinquent: r['years_delinquent'] ? Number(r['years_delinquent']) : undefined,
+        taxSaleScheduled: Boolean(r['tax_sale_scheduled']),
+        taxSaleDate: r['tax_sale_date'] as string | undefined,
+        dateFiled: r['date_filed'] as string | undefined,
+      };
+    });
 
-    return { delinquencies, totalCount };
+    return { delinquencies, totalCount, totalCountCapped };
   } catch (err) {
     console.error('[getTaxDelinquencies] Query error:', err);
-    return { delinquencies: [], totalCount: 0 };
+    return { delinquencies: [], totalCount: 0, totalCountCapped: false };
   }
 }
 

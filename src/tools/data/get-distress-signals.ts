@@ -32,6 +32,11 @@ export const getDistressSignalsDefinition = {
     properties: {
       signals: { type: 'array' },
       totalCount: { type: 'number' },
+      totalCountCapped: {
+        type: 'boolean',
+        description:
+          'True when totalCount was capped server-side because the filtered result set exceeded the safety LIMIT. Refine filters or paginate.',
+      },
       page: { type: 'number' },
       pageSize: { type: 'number' },
       fetchedAt: { type: 'string' },
@@ -92,19 +97,23 @@ export async function getDistressSignalsHandler(
       };
     }
 
-    const { signals, totalCount } = await getDistressSignals(args.countyFips, {
-      signalType: args.signalType,
-      minAmount: args.minAmount,
-      maxAmount: args.maxAmount,
-      filedAfter: args.filedAfter,
-      filedBefore: args.filedBefore,
-      page,
-      pageSize,
-    });
+    const { signals, totalCount, totalCountCapped } = await getDistressSignals(
+      args.countyFips,
+      {
+        signalType: args.signalType,
+        minAmount: args.minAmount,
+        maxAmount: args.maxAmount,
+        filedAfter: args.filedAfter,
+        filedBefore: args.filedBefore,
+        page,
+        pageSize,
+      }
+    );
 
     const result = {
       signals,
       totalCount,
+      totalCountCapped,
       page,
       pageSize,
       fetchedAt: new Date().toISOString(),

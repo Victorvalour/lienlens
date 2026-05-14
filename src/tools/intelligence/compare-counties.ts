@@ -26,9 +26,25 @@ export const compareCountiesDefinition = {
   outputSchema: {
     type: 'object' as const,
     properties: {
-      rankings: { type: 'array' },
+      rankings: {
+        type: 'array',
+        description:
+          'Per-county ranking rows. hasAmountData is false when the underlying source does not publish dollar amounts (e.g. NYC); in that case avgAmount will be 0 and the row is ranked by signal count only.',
+      },
       mostDistressed: { type: 'string' },
       leastDistressed: { type: 'string' },
+      comparisonBasis: {
+        type: 'string',
+        enum: ['signal_count', 'signal_count_and_amount'],
+        description:
+          'Indicates whether the comparison ranking is based purely on signal count (when one or more counties lack dollar amounts) or signal count plus dollar amounts.',
+      },
+      notes: {
+        type: 'array',
+        items: { type: 'string' },
+        description:
+          'Caveats about the comparison (e.g. NYC ranked by signal count rather than dollar value).',
+      },
       fetchedAt: { type: 'string' },
       dataSources: { type: 'array' },
       dataFreshness: { type: 'string' },
@@ -91,6 +107,7 @@ export async function compareCountiesHandler(args: CompareCountiesArgs): Promise
       name: string;
       totalSignals: number;
       avgAmount: number;
+      hasAmountData: boolean;
       trend: TrendDirection;
       rank: number;
     }> = [];
@@ -103,8 +120,10 @@ export async function compareCountiesHandler(args: CompareCountiesArgs): Promise
       });
 
       const totalSignals = totalCount;
-      const avgAmount = signals.length > 0
-        ? Math.round(signals.reduce((s, sig) => s + (sig.amount ?? 0), 0) / signals.length)
+      const amountSignals = signals.filter(s => s.amount != null && s.amount > 0);
+      const hasAmountData = amountSignals.length > 0;
+      const avgAmount = hasAmountData
+        ? Math.round(amountSignals.reduce((s, sig) => s + (sig.amount ?? 0), 0) / amountSignals.length)
         : 0;
       const trend: TrendDirection = 'stable';
 
@@ -113,6 +132,7 @@ export async function compareCountiesHandler(args: CompareCountiesArgs): Promise
         name: COUNTY_NAMES[fips] ?? `County ${fips}`,
         totalSignals,
         avgAmount,
+        hasAmountData,
         trend,
         rank: 0,
       });
@@ -123,10 +143,23 @@ export async function compareCountiesHandler(args: CompareCountiesArgs): Promise
       r.rank = i + 1;
     });
 
+    const allHaveAmountData = rankings.length > 0 && rankings.every(r => r.hasAmountData);
+    const missingAmountCounties = rankings.filter(r => !r.hasAmountData).map(r => r.name);
+    const notes: string[] = [];
+    if (missingAmountCounties.length > 0) {
+      notes.push(
+        `Ranking is by signal count, not dollar value, because the following counties do not publish dollar amounts in their public tax-lien source: ${missingAmountCounties.join(', ')}.`
+      );
+    }
+    const comparisonBasis: 'signal_count' | 'signal_count_and_amount' =
+      allHaveAmountData ? 'signal_count_and_amount' : 'signal_count';
+
     const result = {
       rankings,
       mostDistressed: rankings[0]?.name ?? 'N/A',
       leastDistressed: rankings[rankings.length - 1]?.name ?? 'N/A',
+      comparisonBasis,
+      notes,
       fetchedAt: new Date().toISOString(),
       dataSources: args.countyFips.map(f => COUNTY_NAMES[f] ?? f),
       dataFreshness: 'daily',

@@ -32,7 +32,23 @@ export const getTaxDelinquenciesDefinition = {
     properties: {
       delinquencies: { type: 'array' },
       totalCount: { type: 'number' },
+      totalCountCapped: {
+        type: 'boolean',
+        description:
+          'True when totalCount was capped server-side because the filtered result set exceeded the safety LIMIT. Refine filters or paginate.',
+      },
       totalAmountOutstanding: { type: 'number' },
+      amountFieldsAvailable: {
+        type: 'boolean',
+        description:
+          'False when the underlying source does not expose dollar amounts (e.g. NYC tax-lien sale list). When false, totalAmountOutstanding and per-row amount may be null/0 and should not be used for ranking by dollar value.',
+      },
+      dataLimitations: {
+        type: 'array',
+        items: { type: 'string' },
+        description:
+          'Human-readable notes about coverage gaps in the returned dataset (e.g. NYC amount-field caveat).',
+      },
       page: { type: 'number' },
       pageSize: { type: 'number' },
       fetchedAt: { type: 'string' },
@@ -94,22 +110,44 @@ export async function getTaxDelinquenciesHandler(
       };
     }
 
-    const { delinquencies, totalCount } = await getTaxDelinquencies(args.countyFips, {
-      minAmount: args.minAmount,
-      maxAmount: args.maxAmount,
-      minYearsDelinquent: args.minYearsDelinquent,
-      propertyType: args.propertyType,
-      taxSaleScheduled: args.taxSaleScheduled,
-      page,
-      pageSize,
-    });
+    const { delinquencies, totalCount, totalCountCapped } = await getTaxDelinquencies(
+      args.countyFips,
+      {
+        minAmount: args.minAmount,
+        maxAmount: args.maxAmount,
+        minYearsDelinquent: args.minYearsDelinquent,
+        propertyType: args.propertyType,
+        taxSaleScheduled: args.taxSaleScheduled,
+        page,
+        pageSize,
+      }
+    );
 
-    const totalAmountOutstanding = delinquencies.reduce((sum, d) => sum + d.amount, 0);
+    // NYC's tax-lien-sale source does not publish dollar amounts. Surface this
+    // explicitly so consumers do not treat totalAmountOutstanding=0 as a real
+    // value, and so they can rank NYC by signal count rather than dollars.
+    const NYC_FIPS = '36061';
+    const isNyc = args.countyFips === NYC_FIPS;
+    const amountFieldsAvailable =
+      !isNyc && delinquencies.some(d => d.amount != null && d.amount > 0);
+    const totalAmountOutstanding = delinquencies.reduce(
+      (sum, d) => sum + (d.amount ?? 0),
+      0
+    );
+    const dataLimitations: string[] = [];
+    if (isNyc) {
+      dataLimitations.push(
+        'NYC coverage: lien presence and parcel metadata only. Dollar amount fields are not published by the NYC Department of Finance tax-lien-sale list, so per-row amount and totalAmountOutstanding will be null/0. Use signal count for ranking.'
+      );
+    }
 
     const result = {
       delinquencies,
       totalCount,
+      totalCountCapped,
       totalAmountOutstanding,
+      amountFieldsAvailable,
+      dataLimitations,
       page,
       pageSize,
       fetchedAt: new Date().toISOString(),
